@@ -1,12 +1,17 @@
 <?php
 /**
- * Copy this file to config.local.php and paste your Google AI Studio API key.
+ * Copy this file to config.local.php and paste your Google AI Studio API key(s).
  * Get a key at: https://aistudio.google.com/apikey
+ *
+ * Use google_api_keys for failover when one key hits free-tier rate limits.
  */
 return [
-    'google_api_key' => 'YOUR_GOOGLE_API_KEY_HERE',
+    'google_api_keys' => [
+        'YOUR_PRIMARY_GOOGLE_API_KEY',
+        'YOUR_FALLBACK_GOOGLE_API_KEY',
+    ],
     // Optional overrides:
-    // 'tts_model' => 'gemini-2.5-flash-preview-tts',
-    // 'listen_model' => 'gemini-2.5-flash',
-    // 'voice' => 'Kore', // Aoede, Charon, Fenrir, Kore, Leda, Orus, Puck, Zephyr
+    // 'tts_model' => 'gemini-3.8-flash-lite-tts',
+    // 'listen_model' => 'gemini-3.5-flash-lite',
+    // 'voice' => 'Kore',
 ];

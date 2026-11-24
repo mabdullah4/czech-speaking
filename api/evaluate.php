@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/config.php';
-require_api_key($GOOGLE_API_KEY);
+require_api_key();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'POST required'], 405);
@@ -23,7 +23,7 @@ $prompt = "Jsi examinátor ústní části české zkoušky A2 (trvalý pobyt).\
     . "Odpověď kandidáta: {$answer}\n\n"
     . 'Vrať JSON: {"ok":true|false,"score":1-5,"note":"krátký feedback česky","better":"vzorová odpověď nebo null"}';
 
-$result = gemini_interactions($GOOGLE_API_KEY, [
+$result = gemini_interactions_failover($GOOGLE_API_KEYS, [
     'model' => $LISTEN_MODEL,
     'system_instruction' => 'You grade A2 Czech speaking answers. Output JSON only, no markdown.',
     'input' => $prompt,

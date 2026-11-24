@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/config.php';
-require_api_key($GOOGLE_API_KEY);
+require_api_key();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'POST required'], 405);
@@ -30,14 +30,7 @@ if (is_readable($cacheFile)) {
     }
 }
 
-if (!tts_rate_limit_wait(3, 75)) {
-    json_response([
-        'error' => 'TTS rate limit busy. Please wait about a minute and try again.',
-        'retry_after' => 30,
-    ], 429);
-}
-
-$result = gemini_interactions($GOOGLE_API_KEY, [
+$payload = [
     'model' => $TTS_MODEL,
     'input' => [[
         'type' => 'user_input',
@@ -56,44 +49,21 @@ $result = gemini_interactions($GOOGLE_API_KEY, [
             ['voice' => $VOICE_NAME],
         ],
     ],
-], 90);
+];
 
-// One automatic retry if Gemini still says rate-limited
-if (
-    !$result['ok']
-    && isset($result['error'])
-    && stripos((string) $result['error'], 'rate') !== false
-) {
-    sleep(22);
-    if (tts_rate_limit_wait(3, 40)) {
-        $result = gemini_interactions($GOOGLE_API_KEY, [
-            'model' => $TTS_MODEL,
-            'input' => [[
-                'type' => 'user_input',
-                'content' => [[
-                    'type' => 'text',
-                    'text' => $text,
-                    'annotations' => [[
-                        'type' => 'speech_metadata',
-                        'style' => $style,
-                    ]],
-                ]],
-            ]],
-            'response_format' => ['type' => 'audio'],
-            'generation_config' => [
-                'speech_config' => [
-                    ['voice' => $VOICE_NAME],
-                ],
-            ],
-        ], 90);
-    }
+$result = gemini_tts_failover($GOOGLE_API_KEYS, $payload, 90);
+
+if (!$result['ok'] && gemini_is_rate_limited($result)) {
+    // Brief pause then one more pass across keys
+    sleep(12);
+    $result = gemini_tts_failover($GOOGLE_API_KEYS, $payload, 90);
 }
 
 if (!$result['ok']) {
-    $status = (stripos((string) ($result['error'] ?? ''), 'rate') !== false) ? 429 : 502;
+    $status = gemini_is_rate_limited($result) ? 429 : 502;
     json_response([
         'error' => $result['error'] ?? 'TTS failed',
-        'retry_after' => $status === 429 ? 30 : null,
+        'retry_after' => $status === 429 ? 25 : null,
     ], $status);
 }
 
@@ -121,10 +91,13 @@ if (stripos($mime, 'wav') === false) {
     $outMime = $mime;
 }
 
-$payload = [
+$out = [
     'mime' => $outMime,
     'audio' => base64_encode($outBytes),
 ];
-file_put_contents($cacheFile, json_encode($payload));
+file_put_contents($cacheFile, json_encode($out));
 
-json_response($payload + ['cached' => false]);
+json_response($out + [
+    'cached' => false,
+    'key_index' => $result['key_index'] ?? 0,
+]);

@@ -5,16 +5,42 @@ header('X-Content-Type-Options: nosniff');
 
 $configFile = dirname(__DIR__) . '/config.local.php';
 if (is_readable($configFile)) {
-    /** @var array{google_api_key?:string,tts_model?:string,listen_model?:string,voice?:string} $local */
+    /** @var array{google_api_key?:string,google_api_keys?:list<string>,tts_model?:string,listen_model?:string,voice?:string} $local */
     $local = require $configFile;
 } else {
     $local = [];
 }
 
-$GOOGLE_API_KEY = $local['google_api_key']
+$GOOGLE_API_KEYS = [];
+if (!empty($local['google_api_keys']) && is_array($local['google_api_keys'])) {
+    foreach ($local['google_api_keys'] as $k) {
+        $k = trim((string) $k);
+        if ($k !== '') {
+            $GOOGLE_API_KEYS[] = $k;
+        }
+    }
+}
+$primary = trim((string) (
+    $local['google_api_key']
     ?? getenv('GOOGLE_API_KEY')
     ?: getenv('GEMINI_API_KEY')
-    ?: '';
+    ?: ''
+));
+if ($primary !== '' && !in_array($primary, $GOOGLE_API_KEYS, true)) {
+    array_unshift($GOOGLE_API_KEYS, $primary);
+}
+$envExtra = getenv('GEMINI_API_KEYS') ?: getenv('GOOGLE_API_KEYS') ?: '';
+if (is_string($envExtra) && $envExtra !== '') {
+    foreach (explode(',', $envExtra) as $k) {
+        $k = trim($k);
+        if ($k !== '' && !in_array($k, $GOOGLE_API_KEYS, true)) {
+            $GOOGLE_API_KEYS[] = $k;
+        }
+    }
+}
+
+/** @deprecated use $GOOGLE_API_KEYS — kept for older endpoints */
+$GOOGLE_API_KEY = $GOOGLE_API_KEYS[0] ?? '';
 
 // Match czech-learning defaults (Interactions API)
 $TTS_MODEL = $local['tts_model'] ?? 'gemini-3.8-flash-lite-tts';
@@ -29,13 +55,23 @@ function json_response(array $payload, int $status = 200): void
     exit;
 }
 
-function require_api_key(string $key): void
+function require_api_key(string $key = ''): void
 {
-    if ($key === '') {
+    global $GOOGLE_API_KEYS;
+    if ($key === '' && empty($GOOGLE_API_KEYS)) {
         json_response([
             'error' => 'Missing Google API key. Copy config.local.php.example to config.local.php and add your key.',
         ], 500);
     }
+}
+
+function gemini_is_rate_limited(array $result): bool
+{
+    if (($result['status'] ?? 0) === 429) {
+        return true;
+    }
+    $err = (string) ($result['error'] ?? '');
+    return stripos($err, 'rate') !== false || stripos($err, 'quota') !== false;
 }
 
 /**
@@ -147,51 +183,137 @@ function storage_dir(string $subdir): string
 }
 
 /**
- * Free-tier TTS is ~3 RPM. Wait until a slot is free (or give up).
- * Cached responses should call this only before live Gemini calls.
+ * Per-key free-tier TTS ≈ 3 RPM. Returns key index that has a free slot, or -1.
+ * @param list<string> $keys
  */
-function tts_rate_limit_wait(int $maxPerMinute = 3, int $maxWaitSeconds = 75): bool
+function tts_acquire_key_slot(array $keys, int $maxPerMinute = 3, int $maxWaitSeconds = 8): int
 {
-    $file = storage_dir('tts') . '/rate-limit.json';
+    if (!$keys) {
+        return -1;
+    }
+    $file = storage_dir('tts') . '/rate-limit-keys.json';
     $lockPath = storage_dir('tts') . '/rate-limit.lock';
     $lock = fopen($lockPath, 'c+');
     if ($lock === false) {
-        return true;
+        return 0;
     }
     if (!flock($lock, LOCK_EX)) {
         fclose($lock);
-        return true;
+        return 0;
     }
 
     $deadline = microtime(true) + $maxWaitSeconds;
-    $ok = false;
+    $chosen = -1;
     while (microtime(true) < $deadline) {
-        $times = [];
+        $all = [];
         if (is_readable($file)) {
             $decoded = json_decode((string) file_get_contents($file), true);
             if (is_array($decoded)) {
-                $times = array_values(array_filter(
-                    array_map('floatval', $decoded),
-                    static fn(float $t): bool => $t > microtime(true) - 60,
-                ));
+                $all = $decoded;
             }
         }
-        if (count($times) < $maxPerMinute) {
-            $times[] = microtime(true);
-            file_put_contents($file, json_encode($times));
-            $ok = true;
-            break;
+        $now = microtime(true);
+        foreach ($keys as $i => $key) {
+            $id = substr(hash('sha256', $key), 0, 12);
+            $times = [];
+            if (isset($all[$id]) && is_array($all[$id])) {
+                $times = array_values(array_filter(
+                    array_map('floatval', $all[$id]),
+                    static fn(float $t): bool => $t > $now - 60,
+                ));
+            }
+            if (count($times) < $maxPerMinute) {
+                $times[] = $now;
+                $all[$id] = $times;
+                file_put_contents($file, json_encode($all));
+                $chosen = $i;
+                break 2;
+            }
         }
-        $oldest = min($times);
-        $sleep = max(0.25, ($oldest + 60) - microtime(true) + 0.35);
+        // All keys busy — wait for the soonest free slot across keys
+        $wake = $now + 5;
+        foreach ($keys as $key) {
+            $id = substr(hash('sha256', $key), 0, 12);
+            $times = isset($all[$id]) && is_array($all[$id]) ? $all[$id] : [];
+            $times = array_values(array_filter(
+                array_map('floatval', $times),
+                static fn(float $t): bool => $t > $now - 60,
+            ));
+            if ($times) {
+                $wake = min($wake, min($times) + 60 + 0.35);
+            }
+        }
+        $sleep = max(0.2, min(3.0, $wake - microtime(true)));
         flock($lock, LOCK_UN);
-        usleep((int) min($sleep, 5) * 1_000_000);
+        usleep((int) ($sleep * 1_000_000));
         flock($lock, LOCK_EX);
     }
 
     flock($lock, LOCK_UN);
     fclose($lock);
-    return $ok;
+    return $chosen;
+}
+
+/**
+ * Call Gemini trying each API key; on rate-limit move to the next key.
+ *
+ * @param list<string> $keys
+ * @return array{ok:bool,status:int,error?:string,data?:array,key_index?:int}
+ */
+function gemini_interactions_failover(array $keys, array $payload, int $timeout = 90): array
+{
+    if (!$keys) {
+        return ['ok' => false, 'status' => 0, 'error' => 'No API keys configured'];
+    }
+    $last = ['ok' => false, 'status' => 0, 'error' => 'All API keys failed'];
+    foreach ($keys as $i => $key) {
+        $result = gemini_interactions($key, $payload, $timeout);
+        if ($result['ok']) {
+            $result['key_index'] = $i;
+            return $result;
+        }
+        $last = $result;
+        if (!gemini_is_rate_limited($result)) {
+            return $result;
+        }
+    }
+    return $last;
+}
+
+/**
+ * TTS with per-key 3 RPM slots + key failover.
+ *
+ * @param list<string> $keys
+ * @return array{ok:bool,status:int,error?:string,data?:array,key_index?:int}
+ */
+function gemini_tts_failover(array $keys, array $payload, int $timeout = 90): array
+{
+    if (!$keys) {
+        return ['ok' => false, 'status' => 0, 'error' => 'No API keys configured'];
+    }
+    $last = ['ok' => false, 'status' => 0, 'error' => 'All API keys failed'];
+    $n = count($keys);
+    $start = tts_acquire_key_slot($keys, 3, 10);
+    if ($start < 0) {
+        $start = 0;
+    }
+    for ($offset = 0; $offset < $n; $offset += 1) {
+        $i = ($start + $offset) % $n;
+        if ($offset > 0) {
+            // Reserve a slot on the fallback key when possible
+            tts_acquire_key_slot([$keys[$i]], 3, 5);
+        }
+        $result = gemini_interactions($keys[$i], $payload, $timeout);
+        if ($result['ok']) {
+            $result['key_index'] = $i;
+            return $result;
+        }
+        $last = $result;
+        if (!gemini_is_rate_limited($result)) {
+            return $result;
+        }
+    }
+    return $last;
 }
 
 function pcm_to_wav(string $pcm, int $sampleRate = 24000, int $channels = 1, int $bits = 16): string

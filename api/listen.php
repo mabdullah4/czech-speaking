@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 require __DIR__ . '/config.php';
-require_api_key($GOOGLE_API_KEY);
+require_api_key();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'POST required'], 405);
@@ -27,7 +27,7 @@ if (str_starts_with($audioB64, 'data:')) {
     }
 }
 
-$result = gemini_interactions($GOOGLE_API_KEY, [
+$result = gemini_interactions_failover($GOOGLE_API_KEYS, [
     'model' => $LISTEN_MODEL,
     'system_instruction' => 'Transcribe the speech verbatim. It is a language learner speaking Czech, '
         . 'possibly with mistakes: write exactly the words they said, in Czech with diacritics, '
