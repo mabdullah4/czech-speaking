@@ -35,14 +35,15 @@ Optional: **Show question text** if you want to read as well as listen.
 
 ## Examiner audio
 
-All 289 questions are stored as MP3 under `assets/audio/questions/` (Piper `cs_CZ-jirka-low`).  
+All 289 questions are stored as MP3 under `assets/audio/questions/`  
+(Microsoft Edge TTS **cs-CZ-VlastaNeural** — clear Czech female voice).  
 `api/speak.php` serves those first; Gemini TTS is only a fallback.
 
 To regenerate after editing questions:
 
 ```bash
-# needs tools/piper binary + voices (see tools/generate-question-audio.py)
-python3 tools/generate-question-audio.py
+# default: Edge TTS Vlasta (needs edge-tts). Alt: --engine piper (Kasandra)
+python3 tools/generate-question-audio.py --force
 ```
 
 ## Source
