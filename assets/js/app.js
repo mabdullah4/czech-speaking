@@ -375,30 +375,71 @@
     await processAnswer(blob);
   };
 
-  const enqueueGrade = (task) => {
-    const run = gradeQueue.then(task, task);
-    gradeQueue = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    pendingGrades.push(run);
-    return run;
+  const PASS_SCORE = 4;
+
+  const showAttemptFeedback = (transcript, feedback) => {
+    answerText.textContent = transcript || "(no speech detected)";
+    answerBox.classList.remove("hidden");
+    if (feedback) {
+      const score = Number(feedback.score) || 0;
+      feedbackBox.classList.remove("hidden");
+      feedbackBox.innerHTML = `<strong>${score}/5</strong> · ${escapeHtml(feedback.note || "")}${
+        feedback.better
+          ? `<div style="margin-top:6px">Model: ${escapeHtml(feedback.better)}</div>`
+          : ""
+      }`;
+    } else {
+      feedbackBox.classList.add("hidden");
+      feedbackBox.innerHTML = "";
+    }
   };
 
-  const advanceAfterAnswer = async () => {
+  const gradeAnswer = async (blob, questionText) => {
+    const dataUrl = await blobToBase64(blob);
+    let attempt = 0;
+    let data = null;
+    while (attempt < 3) {
+      attempt += 1;
+      const res = await fetch("api/answer.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio: dataUrl,
+          mime: blob.type || "audio/webm",
+          question: questionText,
+        }),
+      });
+      data = await res.json().catch(() => ({}));
+      if (res.ok) break;
+      if (res.status === 429) {
+        await sleep((Number(data.retry_after) || 20) * 1000);
+        continue;
+      }
+      throw new Error(data.error || `Grading failed (${res.status})`);
+    }
+    if (!data || data.error) {
+      throw new Error(data?.error || "Grading failed");
+    }
+    const transcript = (data.transcript || "").trim();
+    return {
+      transcript,
+      feedback: data.feedback || {
+        ok: false,
+        score: 0,
+        note: "No feedback returned",
+        better: null,
+      },
+    };
+  };
+
+  const advanceAfterPass = async () => {
     index += 1;
     updateProgress();
     if (index >= (session?.questions?.length || 0)) {
-      setStatus(examStatus, "Scoring your answers…");
-      busy = true;
-      setBusyUi(true);
-      await Promise.allSettled(pendingGrades);
-      busy = false;
-      setBusyUi(false);
-      finishSession();
+      await finishSession();
       return;
     }
-    setStatus(examStatus, "Next question…");
+    setStatus(examStatus, "Passed — next question…");
     await renderQuestion({ autoSpeak: true });
   };
 
@@ -406,65 +447,41 @@
     const q = currentQuestion();
     if (!q) return;
 
-    const slot = answers.length;
-    answers.push({
-      ...q,
-      answer: "…",
-      feedback: null,
-      pending: true,
-    });
+    busy = true;
+    setBusyUi(true);
+    setStatus(examStatus, "Checking your answer…");
 
-    // Score in background (serial queue — free-tier RPM). User moves on now.
-    enqueueGrade(async () => {
-      try {
-        const dataUrl = await blobToBase64(blob);
-        let attempt = 0;
-        let data = null;
-        while (attempt < 3) {
-          attempt += 1;
-          const res = await fetch("api/answer.php", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              audio: dataUrl,
-              mime: blob.type || "audio/webm",
-              question: q.question,
-            }),
-          });
-          data = await res.json().catch(() => ({}));
-          if (res.ok) break;
-          if (res.status === 429) {
-            await sleep((Number(data.retry_after) || 20) * 1000);
-            continue;
-          }
-          throw new Error(data.error || `Grading failed (${res.status})`);
-        }
-        if (!data || data.error) {
-          throw new Error(data?.error || "Grading failed");
-        }
-        const transcript = (data.transcript || "").trim();
-        answers[slot] = {
+    try {
+      const { transcript, feedback } = await gradeAnswer(blob, q.question);
+      const score = Number(feedback?.score) || 0;
+      showAttemptFeedback(transcript, feedback);
+
+      if (score >= PASS_SCORE) {
+        answers.push({
           ...q,
           answer: transcript || "(no speech detected)",
-          feedback: transcript ? data.feedback || null : null,
+          feedback,
           pending: false,
-        };
-      } catch (err) {
-        answers[slot] = {
-          ...q,
-          answer: "(could not score)",
-          feedback: {
-            ok: false,
-            score: 0,
-            note: err.message || "Scoring failed",
-            better: null,
-          },
-          pending: false,
-        };
+        });
+        setStatus(
+          examStatus,
+          `Passed (${score}/5). Moving on…`,
+        );
+        await sleep(900);
+        await advanceAfterPass();
+      } else {
+        setStatus(
+          examStatus,
+          `Need ${PASS_SCORE}/5 to continue — try again.`,
+          true,
+        );
       }
-    });
-
-    await advanceAfterAnswer();
+    } catch (err) {
+      setStatus(examStatus, err.message || "Scoring failed — try again.", true);
+    } finally {
+      busy = false;
+      setBusyUi(false);
+    }
   };
 
   const clearAudioCache = () => {
@@ -474,20 +491,17 @@
 
   const finishSession = async () => {
     stopPlayback();
-    if (pendingGrades.length) {
-      setStatus(examStatus, "Scoring your answers…");
-      await Promise.allSettled(pendingGrades);
-    }
     pendingGrades = [];
     clearAudioCache();
     showPanel("summary");
     pageTitle.textContent = "Summary";
-    topMeta.innerHTML = `Completed <strong>${answers.length} answers</strong>`;
+    topMeta.innerHTML = `Passed <strong>${answers.length}</strong> of <strong>${session?.questions?.length || 0}</strong>`;
     updateProgress();
 
-    summaryList.innerHTML = answers
-      .map(
-        (item) => `<li>
+    summaryList.innerHTML = answers.length
+      ? answers
+          .map(
+            (item) => `<li>
           <p class="summary-q">${escapeHtml(item.topic)} · ${escapeHtml(item.question)}</p>
           <p class="summary-a">${escapeHtml(item.answer || "—")}</p>
           ${
@@ -498,8 +512,9 @@
                 : ""
           }
         </li>`,
-      )
-      .join("");
+          )
+          .join("")
+      : "<li><p class=\"summary-note\">No passed answers yet.</p></li>";
   };
 
   const syncQuestionCountUi = () => {
@@ -700,30 +715,22 @@
     if (mediaRecorder) stopRecording();
   });
 
-  nextBtn.addEventListener("click", async () => {
+  skipBtn.addEventListener("click", () => {
     if (busy) return;
-    index += 1;
-    updateProgress();
-    if (index >= (session?.questions?.length || 0)) {
-      finishSession();
-      return;
-    }
-    await renderQuestion({ autoSpeak: true });
+    setStatus(
+      examStatus,
+      `Skip disabled — you need ${PASS_SCORE}/5 before the next question.`,
+      true,
+    );
   });
 
-  skipBtn.addEventListener("click", async () => {
+  nextBtn.addEventListener("click", () => {
     if (busy) return;
-    const q = currentQuestion();
-    if (q) {
-      answers.push({ ...q, answer: "(skipped)", feedback: null });
-    }
-    index += 1;
-    updateProgress();
-    if (index >= (session?.questions?.length || 0)) {
-      finishSession();
-      return;
-    }
-    await renderQuestion({ autoSpeak: true });
+    setStatus(
+      examStatus,
+      `You need ${PASS_SCORE}/5 before the next question.`,
+      true,
+    );
   });
 
   stopExamBtn.addEventListener("click", () => {
