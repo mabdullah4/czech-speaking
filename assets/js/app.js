@@ -51,9 +51,12 @@
   let recordStartedAt = 0;
   let playbackRate = 1;
   let selectingLocked = false;
-  /** @type {Map<number, Promise<{audio:string,mime:string}>>} */
+  /** @type {Map<number, Promise<{audio:string,mime:string,url?:string|null}>>} */
   let audioCache = new Map();
   let prefetchReady = 0;
+  /** @type {Promise<void>[]} */
+  let pendingGrades = [];
+  let gradeQueue = Promise.resolve();
 
   const escapeHtml = (value) =>
     String(value).replace(
@@ -368,59 +371,96 @@
     await processAnswer(blob);
   };
 
+  const enqueueGrade = (task) => {
+    const run = gradeQueue.then(task, task);
+    gradeQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    pendingGrades.push(run);
+    return run;
+  };
+
+  const advanceAfterAnswer = async () => {
+    index += 1;
+    updateProgress();
+    if (index >= (session?.questions?.length || 0)) {
+      setStatus(examStatus, "Scoring your answers…");
+      busy = true;
+      setBusyUi(true);
+      await Promise.allSettled(pendingGrades);
+      busy = false;
+      setBusyUi(false);
+      finishSession();
+      return;
+    }
+    setStatus(examStatus, "Next question…");
+    await renderQuestion({ autoSpeak: true });
+  };
+
   const processAnswer = async (blob) => {
     const q = currentQuestion();
     if (!q) return;
 
-    busy = true;
-    setBusyUi(true);
-    setStatus(examStatus, "Transcribing with Google AI…");
+    const slot = answers.length;
+    answers.push({
+      ...q,
+      answer: "…",
+      feedback: null,
+      pending: true,
+    });
 
-    try {
-      const dataUrl = await blobToBase64(blob);
-      const listen = await apiJson("api/listen.php", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ audio: dataUrl, mime: blob.type || "audio/webm" }),
-      });
-
-      const transcript = (listen.transcript || "").trim();
-      answerText.textContent = transcript || "(no speech detected)";
-      answerBox.classList.remove("hidden");
-
-      let feedback = null;
-      if (transcript) {
-        setStatus(examStatus, "Checking answer…");
-        try {
-          feedback = await apiJson("api/evaluate.php", {
+    // Score in background (serial queue — free-tier RPM). User moves on now.
+    enqueueGrade(async () => {
+      try {
+        const dataUrl = await blobToBase64(blob);
+        let attempt = 0;
+        let data = null;
+        while (attempt < 3) {
+          attempt += 1;
+          const res = await fetch("api/answer.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ question: q.question, answer: transcript }),
+            body: JSON.stringify({
+              audio: dataUrl,
+              mime: blob.type || "audio/webm",
+              question: q.question,
+            }),
           });
-          feedbackBox.classList.remove("hidden");
-          feedbackBox.innerHTML = `<strong>${feedback.score}/5</strong> · ${escapeHtml(feedback.note || "")}${
-            feedback.better
-              ? `<div style="margin-top:6px">Vzor: ${escapeHtml(feedback.better)}</div>`
-              : ""
-          }`;
-        } catch {
-          // Feedback is optional
+          data = await res.json().catch(() => ({}));
+          if (res.ok) break;
+          if (res.status === 429) {
+            await sleep((Number(data.retry_after) || 20) * 1000);
+            continue;
+          }
+          throw new Error(data.error || `Grading failed (${res.status})`);
         }
+        if (!data || data.error) {
+          throw new Error(data?.error || "Grading failed");
+        }
+        const transcript = (data.transcript || "").trim();
+        answers[slot] = {
+          ...q,
+          answer: transcript || "(no speech detected)",
+          feedback: transcript ? data.feedback || null : null,
+          pending: false,
+        };
+      } catch (err) {
+        answers[slot] = {
+          ...q,
+          answer: "(could not score)",
+          feedback: {
+            ok: false,
+            score: 0,
+            note: err.message || "Scoring failed",
+            better: null,
+          },
+          pending: false,
+        };
       }
+    });
 
-      answers.push({
-        ...q,
-        answer: transcript,
-        feedback,
-      });
-
-      setStatus(examStatus, "Ready for the next question.");
-    } catch (err) {
-      setStatus(examStatus, err.message, true);
-    } finally {
-      busy = false;
-      setBusyUi(false);
-    }
+    await advanceAfterAnswer();
   };
 
   const clearAudioCache = () => {
@@ -428,8 +468,13 @@
     prefetchReady = 0;
   };
 
-  const finishSession = () => {
+  const finishSession = async () => {
     stopPlayback();
+    if (pendingGrades.length) {
+      setStatus(examStatus, "Scoring your answers…");
+      await Promise.allSettled(pendingGrades);
+    }
+    pendingGrades = [];
     clearAudioCache();
     showPanel("summary");
     pageTitle.textContent = "Summary";
@@ -442,9 +487,11 @@
           <p class="summary-q">${escapeHtml(item.topic)} · ${escapeHtml(item.question)}</p>
           <p class="summary-a">${escapeHtml(item.answer || "—")}</p>
           ${
-            item.feedback?.note
-              ? `<p class="summary-note">${escapeHtml(item.feedback.note)}</p>`
-              : ""
+            item.feedback?.score
+              ? `<p class="summary-note"><strong>${item.feedback.score}/5</strong> · ${escapeHtml(item.feedback.note || "")}</p>`
+              : item.feedback?.note
+                ? `<p class="summary-note">${escapeHtml(item.feedback.note)}</p>`
+                : ""
           }
         </li>`,
       )
@@ -468,6 +515,8 @@
       session = await apiJson(buildSessionUrl());
       index = 0;
       answers = [];
+      pendingGrades = [];
+      gradeQueue = Promise.resolve();
       clearAudioCache();
       showPanel("exam");
       setStatus(homeStatus, "");
@@ -475,7 +524,6 @@
         examStatus,
         `Preparing examiner audio (1/${session.questions.length})…`,
       );
-      // One at a time: start after Q1 is ready; rest prefetch slowly in background.
       await ensureAudio(0);
       prefetchRestAudio();
       await renderQuestion({ autoSpeak: true });

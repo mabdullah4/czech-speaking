@@ -28,8 +28,8 @@ Allow microphone access when the browser asks.
 
 1. **Start practice** — 2 topics appear in the sidebar (highlighted).
 2. Examiner speaks each question (pre-baked Piper Czech audio — no TTS quota).
-3. **Hold to answer** — record your reply; Gemini transcribes and briefly scores it.
-4. Continue through 8 questions, then see a summary.
+3. **Press to answer** — recording stops → next question starts immediately; Gemini scores in the background.
+4. After 8 answers, the summary waits for any leftover scores.
 
 Optional: **Show question text** if you want to read as well as listen.
 
