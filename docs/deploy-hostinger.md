@@ -6,9 +6,9 @@ Static HTML + PHP API. Deploys via SSH + rsync from GitHub Actions (same pattern
 
 | Role | URL |
 |------|-----|
-| Canonical | `https://speaking.numbertools.eu` |
-| Temporary (until `.eu` subdomain exists) | `https://numbertools.io/speaking` |
-| Old redirect (after cutover) | `https://speaking.numbertools.io` → `.eu` |
+| Canonical (after cutover) | `https://speaking.numbertools.eu` |
+| **Live now** | `https://vocabulary.numbertools.io/speaking/` |
+| After dedicated subdomain | `https://speaking.numbertools.io` → redirect to `.eu` |
 
 ## GitHub secrets
 
@@ -23,13 +23,15 @@ Static HTML + PHP API. Deploys via SSH + rsync from GitHub Actions (same pattern
 
 ### DEPLOY_PATH
 
-**While using the main domain folder:**
+**Live now (path under vocabulary site):**
 
-`/home/u712052388/public_html/speaking`
+`/home/u712052388/domains/vocabulary.numbertools.io/public_html/speaking`
 
 **After creating subdomain `speaking.numbertools.eu` in hPanel:**
 
 `/home/u712052388/domains/speaking.numbertools.eu/public_html`
+
+Then update the `DEPLOY_PATH` GitHub secret and re-run the workflow.
 
 ## Domain cutover (numbertools.eu)
 
