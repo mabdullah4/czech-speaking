@@ -1,0 +1,158 @@
+name: Deploy to Hostinger (speaking.numbertools.eu)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+env:
+  DEFAULT_SSH_PORT: "65002"
+
+concurrency:
+  group: hostinger-speaking
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare SSH key
+        env:
+          SSH_PORT: ${{ secrets.SSH_PORT || env.DEFAULT_SSH_PORT }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          install -m 700 -d ~/.ssh
+          printf '%s\n' "${{ secrets.SSH_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          for i in 1 2 3 4 5; do
+            if ssh-keyscan -4 -p "${SSH_PORT}" -T 15 "${SSH_HOST}" >> ~/.ssh/known_hosts 2>/dev/null; then
+              echo "ssh-keyscan ok (attempt $i)"
+              break
+            fi
+            echo "ssh-keyscan attempt $i failed; sleeping..."
+            sleep $((10 * i))
+          done
+
+      - name: Wait for SSH
+        env:
+          SSH_PORT: ${{ secrets.SSH_PORT || env.DEFAULT_SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+        run: |
+          set -euo pipefail
+          ssh_base() {
+            ssh -4 -i ~/.ssh/deploy_key -p "${SSH_PORT}" \
+              -o BatchMode=yes \
+              -o StrictHostKeyChecking=accept-new \
+              -o ConnectTimeout=30 \
+              -o ConnectionAttempts=3 \
+              -o ServerAliveInterval=15 \
+              -o ServerAliveCountMax=6 \
+              "$@"
+          }
+          for i in $(seq 1 12); do
+            echo "SSH probe attempt $i/12..."
+            if ssh_base "${SSH_USER}@${SSH_HOST}" 'echo ssh-ok'; then
+              echo "SSH is reachable"
+              exit 0
+            fi
+            sleep $((20 + i * 5))
+          done
+          echo "::error::Hostinger SSH stayed unreachable from this runner"
+          exit 1
+
+      - name: Ensure deploy path exists
+        env:
+          SSH_PORT: ${{ secrets.SSH_PORT || env.DEFAULT_SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -4 -i ~/.ssh/deploy_key -p "${SSH_PORT}" \
+            -o BatchMode=yes \
+            -o StrictHostKeyChecking=accept-new \
+            -o ConnectTimeout=30 \
+            "${SSH_USER}@${SSH_HOST}" \
+            "mkdir -p '${DEPLOY_PATH}'"
+
+      - name: Rsync site to Hostinger
+        env:
+          SSH_PORT: ${{ secrets.SSH_PORT || env.DEFAULT_SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          SSH_E="ssh -4 -i ~/.ssh/deploy_key -p ${SSH_PORT} -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o ConnectionAttempts=3 -o ServerAliveInterval=15 -o ServerAliveCountMax=6"
+          for i in $(seq 1 6); do
+            echo "rsync attempt $i/6..."
+            if rsync -avz --delete --partial --timeout=120 \
+              --exclude='.git/' \
+              --exclude='.github/' \
+              --exclude='.cursor/' \
+              --exclude='.DS_Store' \
+              --exclude='.scratch/' \
+              --exclude='.impeccable/' \
+              --exclude='config.local.php' \
+              -e "${SSH_E}" \
+              ./ "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/"; then
+              echo "rsync ok"
+              exit 0
+            fi
+            echo "rsync attempt $i failed; sleeping before retry..."
+            sleep $((20 * i))
+          done
+          echo "::error::rsync failed after retries"
+          exit 1
+
+      - name: Ensure config.local.php exists on server
+        env:
+          SSH_PORT: ${{ secrets.SSH_PORT || env.DEFAULT_SSH_PORT }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          set -euo pipefail
+          if [ -z "${GEMINI_API_KEY:-}" ]; then
+            echo "No GEMINI_API_KEY secret — leaving server config.local.php untouched"
+            exit 0
+          fi
+          exists=$(ssh -4 -i ~/.ssh/deploy_key -p "${SSH_PORT}" \
+            -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            "${SSH_USER}@${SSH_HOST}" \
+            "test -f '${DEPLOY_PATH}/config.local.php' && echo yes || echo no")
+          if [ "$exists" = "yes" ]; then
+            echo "config.local.php already present — not overwriting"
+            exit 0
+          fi
+          python3 - <<'PY'
+          import os
+          from pathlib import Path
+          key = os.environ["GEMINI_API_KEY"].replace("\\", "\\\\").replace("'", "\\'")
+          Path("/tmp/config.local.php").write_text(
+              "<?php\nreturn [\n"
+              f"    'google_api_key' => '{key}',\n"
+              "    'tts_model' => 'gemini-3.8-flash-lite-tts',\n"
+              "    'listen_model' => 'gemini-3.5-flash-lite',\n"
+              "    'voice' => 'Kore',\n"
+              "];\n"
+          )
+          PY
+          scp -4 -i ~/.ssh/deploy_key -P "${SSH_PORT}" \
+            -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 \
+            /tmp/config.local.php \
+            "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/config.local.php"
+          rm -f /tmp/config.local.php
+          echo "Wrote config.local.php on server"
+
+      - name: Cleanup SSH key
+        if: always()
+        run: rm -f ~/.ssh/deploy_key

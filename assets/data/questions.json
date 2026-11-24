@@ -1,0 +1,1214 @@
+{
+  "topics": {
+    "bydleni": {
+      "name": "Bydlení",
+      "questions": [
+        {
+          "subtopic": "Moje rodina",
+          "question": "Jste vdaná/ženatý?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Kolik máte dětí?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Máte sourozence?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Kde bydlí vaši rodiče?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Jak často chodíte na návštěvu k příbuzným?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Kdo je pro vás v rodině nejdůležitější?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "S kým nejčastěji mluvíte?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Co s rodinou slavíte?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Jaká je nebo byla vaše matka?"
+        },
+        {
+          "subtopic": "Moje rodina",
+          "question": "Jak vypadá nebo vypadal váš otec?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Kde bydlíte?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Jak dlouho žijete v tom bytě nebo domě?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Kdo s vámi bydlí?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Jak velký je váš byt?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Kolik máte pokojů?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Co máte v kuchyni?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Jak často uklízíte?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Kde parkujete auto?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Co vidíte z okna?"
+        },
+        {
+          "subtopic": "Můj byt/dům",
+          "question": "Co můžete dělat na zahradě?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Kolikátého platíte nájem nebo hypotéku?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Za co musíte platit poplatky?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Jaké máte sousedy?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Jak často máte nějaký problém v bytě/domě?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Jaké máte v bytě/domě topení?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Co budete dělat, když nefunguje pračka?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Koho zavoláte, když nesvítí světlo?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Kde nakupujete nábytek?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Kdo u vás doma opravuje rozbité věci?"
+        },
+        {
+          "subtopic": "Problémy v bytě/domě",
+          "question": "Kdy jste naposledy ztratil/a klíč od bytu/domu?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Jak vypadá dům, kde bydlíte?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "V kterém patře bydlíte?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Jak daleko od vašeho domu je obchod s potravinami?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Kde je nejbližší zastávka autobusu?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Kam chodíte na procházku?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Jak rychle se dostanete do centra?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Co se vám líbí blízko vašeho domu?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Kde byste chtěl/a bydlet?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Jaké domácí zvíře máte nebo jste měl/a?"
+        },
+        {
+          "subtopic": "Dům a okolí",
+          "question": "Kdy je ve vašem domě největší ticho?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Ve kterém městě bydlíte?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Jaké je vaše město?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Jak dlouho ve městě žijete?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Jaké zajímavé místo tam je?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Co se vám ve městě nelíbí?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Co se nachází blízko vašeho domu?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Co vám ve vašem městě chybí?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Jak často chodíte nebo jezdíte do centra?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Odkud jste?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Jaká je vaše země?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Jak daleko je vaše země od Česka?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Jaké počasí je ve vaší zemi v zimě?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Jak ve vaší zemi lidé mluví?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Co je ve vaší zemi lepší než v Česku?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Co je ve vaší zemi horší než v Česku?"
+        }
+      ]
+    },
+    "cestovani": {
+      "name": "Cestování",
+      "questions": [
+        {
+          "subtopic": "Cestování",
+          "question": "Co je váš oblíbený dopravní prostředek?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Jak často někam létáte?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kde jste byl/a naposledy na dovolené?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kam obvykle jezdíte autem?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kdy jste naposledy jel/a na kole?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kdo ve vaší rodině jezdí na motorce?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Jak rychle jezdíte v Česku po dálnici?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Jak dlouho máte řidičský průkaz?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Odkud kam cestujete vlakem?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Co musíte zaplatit, když jedete bez jízdenky?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Čím rád/a cestujete?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kam jste jel/a naposledy vlakem?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Jak často jezdíte metrem?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Čím nerad/a jezdíte?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kam jezdíte obvykle na dovolenou?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Cosi musíte koupit, když chcete jet vlakem?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kolik stojí jízdenka na MHD?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Kolikrát za měsíc jezdíte autobusem?"
+        }
+      ]
+    },
+    "denni-rezim": {
+      "name": "Denní režim",
+      "questions": [
+        {
+          "subtopic": "Denní režim",
+          "question": "V kolik hodin obvykle vstáváte v pracovní den?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Co snídáte?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Kde snídáte?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Jak jezdíte do práce?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Odkdy dokdy pracujete?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "V kolik hodin obědváte?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Co děláte po práci?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Co děláte obvykle večer?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Co jste dělal/a včera večer?"
+        },
+        {
+          "subtopic": "Denní režim",
+          "question": "Co budete dělat zítra?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Jak často o víkendu pracujete?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "V kolik hodin normálně vstáváte?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Co máte obvykle k snídani?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Kde většinou obědváte?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Kdo o víkendu vaří?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Odkdy dokdy můžete odpočívat?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Co o víkendu nemusíte dělat?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Co o víkendu rád/a děláte?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Na co se díváte v televizi?"
+        },
+        {
+          "subtopic": "Můj víkend",
+          "question": "Jak pozdě chodíte spát?"
+        }
+      ]
+    },
+    "jidlo-a-piti": {
+      "name": "Jídlo a pití",
+      "questions": [
+        {
+          "subtopic": "Jídlo",
+          "question": "Co nejčastěji jíte k obědu?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "V kolik hodin večeříte?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Co jste ráno snídal/a?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Které české jídlo vám chutná?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Jak často pijete kávu?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Kam chodíte do restaurace?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Co umíte uvařit?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Které ovoce jíte rád/a?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Co nikdy nejíte?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Které jídlo mi můžete doporučit?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Kde nakupujete jídlo?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Jak často chodíte do restaurace?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Co jíte nebo pijete jenom málo?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Kdy vaříte?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Co jste měl/a dnes k svačině?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Kam půjdete příště na nákup?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Jak obvykle platíte za jídlo?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Kterou zeleninu máte rád/a?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "Které jídlo vám nechutná?"
+        },
+        {
+          "subtopic": "Jídlo",
+          "question": "V kolik hodin obvykle snídáte?"
+        }
+      ]
+    },
+    "nakupovani-a-sluzby": {
+      "name": "Nakupování a služby",
+      "questions": [
+        {
+          "subtopic": "Nakupování",
+          "question": "Co kupujete každý týden?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Co kupujete jenom občas?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Jak často nakupujete v supermarketu?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Který obchod je váš oblíbený?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Co nerad/a nakupujete?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Kde platíte hotově?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Co nakupujete online?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Kolikrát za rok nakupujete oblečení?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Kdy obvykle nakupujete?"
+        },
+        {
+          "subtopic": "Nakupování",
+          "question": "Který obchod mi nedoporučíte?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Kde nakupujete ovoce a zeleninu?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Kdy jste naposledy koupil/a počítač?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Kolik stojí mobilní telefon?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Jak často jezdíte nakoupit autem?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Co jste naposledy reklamoval/a?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Odkdy dokdy má otevřeno váš oblíbený obchod?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Kdy je v obchodech normálně zavřeno?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Kde nakupujete oblečení?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Které oblečení nesnášíte?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Co je vaše oblíbená barva?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Co nosíte v zimě?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Jaké boty máte rád/a?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Co je vaše oblíbená značka oblečení nebo bot?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Kam chodíte, když máte oblek nebo kostým?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Jak často chodíte do banky?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Co děláte na poště?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Kam chodíte na masáž?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Kde vám ostříhají vlasy?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Jakého máte telefonního operátora?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Kam jdete, když máte špinavý kabát?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Které služby využíváte nejčastěji?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Jaké služby nikdy nepotřebujete?"
+        }
+      ]
+    },
+    "pocasi": {
+      "name": "Počasí",
+      "questions": [
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké počasí se vám líbí?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Co děláte, když je venku zima?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké počasí je v Česku v létě?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Co potřebujete, když prší?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Co nosíte, když je horko?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké počasí nesnášíte?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Které roční období máte nejradši?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Které roční období nemáte rád/a?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Kde je podle vás nejlepší klima?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaký sport můžete dělat v zimě?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké bylo včera počasí?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké je teď počasí?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké bude počasí o víkendu?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jak často se díváte na předpověď počasí?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké oblečení nosíte na jaře?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Kdy byla naposledy bouřka?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Kolik je dnes stupňů?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Co padá v zimě?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "Jaké počasí je na podzim?"
+        },
+        {
+          "subtopic": "Počasí",
+          "question": "V kterém ročním období jezdíte na dovolenou?"
+        }
+      ]
+    },
+    "prace": {
+      "name": "Práce",
+      "questions": [
+        {
+          "subtopic": "Práce",
+          "question": "Kde pracujete?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Jaká je vaše pracovní doba?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Jakou máte profesi?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "V kolik hodin začínáte pracovat?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Odkdy dokdy máte pauzu na oběd?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Kde obvykle obědváte?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "V kolik hodin se vracíte z práce?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Jak dlouho už pracujete?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Co vás v práci nebaví?"
+        },
+        {
+          "subtopic": "Práce",
+          "question": "Co potřebujete pro práci?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Co je vaše povolání?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Kdo je váš zaměstnavatel?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Jaký je váš nadřízený?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Máte nějaké podřízené?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Jak často pracujete přesčas?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Jaké pracovní pomůcky používáte?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Kolik peněz chcete vydělávat?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Jakou máte pracovní smlouvu?"
+        },
+        {
+          "subtopic": "Zaměstnání",
+          "question": "Kde hledáte práci?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Jak dlouho chcete pracovat tam, kde pracujete?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Kolikrát jste už změnil/a práci?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Kdy budete mít příští dovolenou?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Jak často jste nemocný/á?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Co budete dělat, až budete v důchodu?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Kdo ve vaší rodině šel nebo půjde na mateřskou dovolenou?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Chtěl/a byste podnikat?"
+        }
+      ]
+    },
+    "volny-cas-a-zabava": {
+      "name": "Volný čas a zábava",
+      "questions": [
+        {
+          "subtopic": "Volný čas",
+          "question": "Kdy máte normálně volno?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Které svátky rád/a slavíte?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Kam jezdíte na výlet?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "S kým chodíte na procházku?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Koho nejvíc navštěvujete?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Na jaké filmy nebo seriály se rád/a díváte?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Jak dlouho normálně odpočíváte?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Kolik máte doma knih?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Jakou hru rád/a hrajete?"
+        },
+        {
+          "subtopic": "Volný čas",
+          "question": "Kde obvykle sportujete?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Co rád/a děláte o víkendu?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Jak často chodíte do kina nebo do divadla?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Co je vaše největší hobby?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Kolik času máte na svoje koníčky?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Co vás vůbec nebaví?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Který spisovatel se vám líbí?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Jakou hudbu posloucháte?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Jak často čtete knihy?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Jaké výstavy vás zajímají?"
+        },
+        {
+          "subtopic": "Koníčky",
+          "question": "Co děláte ve volném čase na internetu?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "V kterém ročním období jezdíte na dovolenou?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Kam rád/a jezdíte na dovolenou?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Jak cestujete na dovolenou?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Co na dovolené obvykle děláte?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Co na dovolené nesnášíte?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Jaké suvenýry si kupujete?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Kolikrát za rok jezdíte na dovolenou?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Kam plánujete jet na příští dovolenou?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Kde jste obvykle ubytovaný/á?"
+        },
+        {
+          "subtopic": "Dovolená",
+          "question": "Kde se na dovolené stravujete?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Kolik máte českých kamarádů?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Jak se jmenuje váš nejlepší kamarád nebo vaše nejlepší kamarádka?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Jak dlouho už nejlepšího kamaráda (nejlepší kamarádku) znáte?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Proč je to váš nejlepší kamarád (vaše nejlepší kamarádka)?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Kde bydlí vaši nejlepší kamarádi?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Jak často se scházíte s kamarády?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Kam s kamarády obvykle chodíte?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Co s kamarády rádi děláte?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Jak normálně komunikujete s kamarády?"
+        },
+        {
+          "subtopic": "Moji kamarádi",
+          "question": "Komu nejčastěji voláte?"
+        }
+      ]
+    },
+    "vzdelavani": {
+      "name": "Vzdělávání",
+      "questions": [
+        {
+          "subtopic": "Studium",
+          "question": "Jak dlouho jste chodil/a do školy?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Kolik vám bylo let, když jste začal/a chodit do školy?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Jak jste se ve škole učil/a?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Kde jste studoval/a vysokou školu?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Co se učí děti ve škole?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Kdo byl váš oblíbený učitel?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Které předměty vám ve škole šly?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Co vám ve škole nešlo?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Které cizí jazyky umíte?"
+        },
+        {
+          "subtopic": "Studium",
+          "question": "Na co máte talent?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Kolik jazyků umíte?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Který cizí jazyk umíte nejlíp?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Kdyjste se začal/a poprvé učit cizí jazyk?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Kde se normálně cizí jazyky učíte?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Jak často se učíte cízí jazyk?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Covám nejvíc pomáhá, když se učíte cizí jazyk?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Proč se učíte česky?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Co je pro vás v češtině těžké?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Kde obvykle mluvíte česky?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Proč děláte tuhle zkoušku z češtiny?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Kdo vám nejvíc pomáhá učit se česky?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Jak dlouho jste se připravoval/a na zkoušku?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Která část zkoušky byla pro vás nejtěžší?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Jakou jinou zkoušku už jste dělal/a?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "V kolik hodin jste dnes vstával/a?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Jak jste na zkoušku přijel/a?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Kam pojedete po zkoušce?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Co budete dělat večer?"
+        }
+      ]
+    },
+    "zdravi": {
+      "name": "Zdraví",
+      "questions": [
+        {
+          "subtopic": "Zdraví",
+          "question": "Jaké je vaše zdraví?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Jak často chodíte k lékaři?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Kdy jste byl/a naposledy u doktora?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Co děláte pro své zdraví?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Jak často jíte ovoce a zeleninu?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Jaký děláte sport?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Co děláte, když jste nemocný/á?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Na co máte alergii?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Zlomil/a jste si někdy něco?"
+        },
+        {
+          "subtopic": "Zdraví",
+          "question": "Co budete dělat, když budete mít průjem?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Jaké jídlo je zdravé?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Znáte někoho, kdo hodně kouří?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Odkdy dokdy obvykle pracujete?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Jak často sportujete?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Kde můžou lidé cvičit?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Jak dlouho obvykle sedíte u mobilu nebo u počítače?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Jak může člověk zhubnout?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Jakou vážnou nemoc už jste měl/a?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Ke kterému lékaři chodíte nejčastěji?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Kde musíte u doktora čekat?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Ke kterému lékaři jdete, když vás bolí zuby?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Jak se léčíte, když máte virózu?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Co musíte mít, když chcete jít v Česku k lékaři?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Co doktor udělá, když máte zlomenou nohu?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Jaký sport je populární ve vaší zemi?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Jak často vaše děti sportujou?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Co potřebujete, když chcete hrát fotbal?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Který sport byste se chtěl/a naučit?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "V kolik hodin je nejlepší sportovat?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Jaký sport můžou dělat staří lidé?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Jak dlouho už umíte plavat?"
+        }
+      ]
+    }
+  }
+}

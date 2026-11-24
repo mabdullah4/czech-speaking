@@ -1,0 +1,12 @@
+<?php
+/**
+ * Copy this file to config.local.php and paste your Google AI Studio API key.
+ * Get a key at: https://aistudio.google.com/apikey
+ */
+return [
+    'google_api_key' => 'YOUR_GOOGLE_API_KEY_HERE',
+    // Optional overrides:
+    // 'tts_model' => 'gemini-2.5-flash-preview-tts',
+    // 'listen_model' => 'gemini-2.5-flash',
+    // 'voice' => 'Kore', // Aoede, Charon, Fenrir, Kore, Leda, Orus, Puck, Zephyr
+];

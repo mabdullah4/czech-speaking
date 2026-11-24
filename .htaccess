@@ -1,0 +1,8 @@
+# Ensure PHP API routes work; deny leaking local config if mis-deployed
+<Files "config.local.php">
+  Require all denied
+</Files>
+
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d

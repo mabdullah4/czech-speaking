@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="cs">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#f4f3ed" />
+    <title>Čeština | A2 Speaking · Úloha 1</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">Č</div>
+          <div>
+            <div class="brand-name">Čeština</div>
+            <div class="brand-sub">Czech study desk</div>
+          </div>
+        </div>
+        <div class="nav-label">Pick topics · or leave empty for random 2</div>
+        <nav class="topic-list" id="topicList" aria-label="Speaking topics"></nav>
+        <div class="sidebar-pick-actions">
+          <button type="button" class="side-link" id="clearTopicsBtn">Clear</button>
+          <button type="button" class="side-link" id="randomTwoBtn">Random 2</button>
+        </div>
+        <div class="sidebar-foot">
+          A2 · TRVALÝ POBYT<br />
+          MLUVENÍ · ÚLOHA 1
+        </div>
+      </aside>
+
+      <main class="main">
+        <header class="topbar">
+          <div class="crumb">
+            Study desk <span aria-hidden="true">/</span> Speaking T1
+          </div>
+          <div class="top-meta" id="topMeta">
+            Practice <strong>2 topics · 4 questions each</strong>
+          </div>
+        </header>
+
+        <section class="heading-row">
+          <div>
+            <div class="eyebrow">Ústní zkouška · Google AI</div>
+            <h1 id="pageTitle">Otázky</h1>
+          </div>
+          <div class="word-total">
+            <strong id="progressCount">0</strong><span id="progressLabel">/ 8</span>
+          </div>
+        </section>
+
+        <div class="progress-rail" aria-hidden="true">
+          <div class="progress-fill" id="progressFill"></div>
+        </div>
+
+        <section class="study-area" id="studyArea" aria-live="polite">
+          <div class="hero-panel" id="homePanel">
+            <p>
+              Procvičujte ústní část A2: vyberte témata vlevo (nebo nechte
+              prázdné → náhodná <strong>2 témata</strong>). Z každého dostanete
+              <strong>4 otázky</strong>. Otázky uslyšíte od Google AI; odpověď
+              nahrajete mikrofonem.
+            </p>
+            <div class="setup-bar" aria-label="Practice settings">
+              <label class="setup-field" for="speechRate">
+                <span class="field-label">Speech speed</span>
+                <select id="speechRate" aria-label="Speech playback speed">
+                  <option value="0.85">0.85× slower</option>
+                  <option value="1" selected>1× normal</option>
+                  <option value="1.25">1.25×</option>
+                  <option value="1.5">1.5× faster</option>
+                  <option value="1.75">1.75×</option>
+                  <option value="2">2× fastest</option>
+                </select>
+              </label>
+              <div class="setup-field">
+                <span class="field-label">Selection</span>
+                <strong class="setup-value" id="selectionSummary">Random 2 topics</strong>
+              </div>
+            </div>
+            <div class="rules">
+              <h2>Pravidla jako u zkoušky</h2>
+              <ul>
+                <li>Odpovězte <strong>jednou celou větou</strong> — ne jedním slovem, ale ani dlouho.</li>
+                <li>Témata uvidíte předem; otázky nejdřív jen uslyšíte.</li>
+                <li>Mluvte spontánně — nečtěte napsaný text.</li>
+              </ul>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn" id="startBtn">Start practice</button>
+              <button type="button" class="btn btn-secondary" id="showQuestionsToggle">
+                Show question text
+              </button>
+            </div>
+            <div class="status-line" id="homeStatus"></div>
+          </div>
+
+          <div class="exam-stage hidden" id="examPanel">
+            <div class="topic-chip-row" id="topicChips"></div>
+            <div class="question-block">
+              <div class="q-meta" id="qMeta">Question 1 of 8</div>
+              <div class="q-topic" id="qTopic">—</div>
+              <p class="q-prompt">Poslouchejte otázku a odpovězte celou větou.</p>
+              <p class="q-text hidden-q" id="qText">—</p>
+              <div class="controls">
+                <button type="button" class="btn btn-secondary" id="replayBtn">Replay question</button>
+                <button type="button" class="btn btn-record" id="recordBtn">Press to answer</button>
+                <button type="button" class="btn btn-secondary" id="skipBtn">Skip</button>
+                <button type="button" class="btn btn-danger btn-secondary" id="stopExamBtn">End</button>
+                <label class="inline-rate" for="speechRateExam">
+                  <span class="field-label">Speed</span>
+                  <select id="speechRateExam" aria-label="Speech playback speed during exam">
+                    <option value="0.85">0.85×</option>
+                    <option value="1" selected>1×</option>
+                    <option value="1.25">1.25×</option>
+                    <option value="1.5">1.5×</option>
+                    <option value="1.75">1.75×</option>
+                    <option value="2">2×</option>
+                  </select>
+                </label>
+              </div>
+              <div class="answer-box hidden" id="answerBox">
+                <div class="answer-label">Vaše odpověď</div>
+                <p class="answer-text" id="answerText"></p>
+                <div class="feedback hidden" id="feedbackBox"></div>
+                <div class="btn-row" style="margin-top: 14px">
+                  <button type="button" class="btn" id="nextBtn">Next question</button>
+                </div>
+              </div>
+              <div class="status-line" id="examStatus"></div>
+            </div>
+          </div>
+
+          <div class="summary hidden" id="summaryPanel">
+            <p>Hotovo. Shrnutí vaší praxe:</p>
+            <ul class="summary-list" id="summaryList"></ul>
+            <div class="btn-row">
+              <button type="button" class="btn" id="againBtn">Practice again</button>
+              <button type="button" class="btn btn-secondary" id="homeBtn">Back home</button>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <script src="assets/js/app.js"></script>
+  </body>
+</html>
