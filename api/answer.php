@@ -2,12 +2,11 @@
 declare(strict_types=1);
 
 /**
- * One Gemini call: transcribe learner audio + grade against the exam question.
- * Cuts free-tier usage vs separate listen.php + evaluate.php.
+ * Grade a spoken answer.
+ * Prefer local Whisper on the VPS (no Gemini quota). Fall back to Gemini multimodal.
  */
 
 require __DIR__ . '/config.php';
-require_api_key();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'POST required'], 405);
@@ -35,6 +34,25 @@ if (str_starts_with($audioB64, 'data:')) {
         $audioB64 = substr($audioB64, $comma + 1);
     }
 }
+
+$bytes = base64_decode($audioB64, true);
+if ($bytes === false || strlen($bytes) < 200) {
+    json_response(['error' => 'Invalid audio'], 400);
+}
+
+global $STT_URL, $STT_API_KEY;
+$sttUrl = $STT_URL;
+$sttKey = $STT_API_KEY;
+
+if ($sttUrl !== '') {
+    $localResult = stt_grade_remote($sttUrl, $sttKey, $question, $bytes, $mime);
+    if ($localResult['ok']) {
+        json_response($localResult['data']);
+    }
+    // Fall through to Gemini if VPS is down
+}
+
+require_api_key();
 
 $prompt = "Otázka examinátora: {$question}\n\n"
     . "Přepiš nahrávku kandidáta doslova (čeština, s diakritikou, bez oprav) "
@@ -69,6 +87,7 @@ if (!$result['ok']) {
     json_response([
         'error' => $result['error'] ?? 'Answer grading failed',
         'retry_after' => $status === 429 ? 20 : null,
+        'hint' => $sttUrl !== '' ? 'VPS STT failed and Gemini fallback failed' : null,
     ], $status);
 }
 
@@ -83,6 +102,7 @@ if (!is_array($parsed)) {
             'note' => 'Hotovo.',
             'better' => null,
         ],
+        'source' => 'gemini',
     ]);
 }
 
@@ -96,4 +116,79 @@ json_response([
         'note' => (string) ($parsed['note'] ?? ''),
         'better' => $parsed['better'] ?? null,
     ],
+    'source' => 'gemini',
 ]);
+
+/**
+ * @return array{ok:bool,data?:array,error?:string}
+ */
+function stt_grade_remote(string $baseUrl, string $apiKey, string $question, string $bytes, string $mime): array
+{
+    $url = rtrim($baseUrl, '/') . '/v1/answer';
+    $boundary = '----speaking' . bin2hex(random_bytes(8));
+    $ext = 'webm';
+    if (stripos($mime, 'wav') !== false) {
+        $ext = 'wav';
+    } elseif (stripos($mime, 'ogg') !== false || stripos($mime, 'opus') !== false) {
+        $ext = 'ogg';
+    } elseif (stripos($mime, 'mp4') !== false || stripos($mime, 'm4a') !== false) {
+        $ext = 'm4a';
+    }
+
+    $body = '';
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"question\"\r\n\r\n";
+    $body .= $question . "\r\n";
+    $body .= "--{$boundary}\r\n";
+    $body .= "Content-Disposition: form-data; name=\"audio\"; filename=\"answer.{$ext}\"\r\n";
+    $body .= 'Content-Type: ' . $mime . "\r\n\r\n";
+    $body .= $bytes . "\r\n";
+    $body .= "--{$boundary}--\r\n";
+
+    $headers = [
+        'Content-Type: multipart/form-data; boundary=' . $boundary,
+    ];
+    if ($apiKey !== '') {
+        $headers[] = 'X-API-Key: ' . $apiKey;
+    }
+
+    $ch = curl_init($url);
+    curl_setopt_array($ch, [
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => $headers,
+        CURLOPT_POSTFIELDS => $body,
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_TIMEOUT => 90,
+        CURLOPT_CONNECTTIMEOUT => 10,
+    ]);
+    $raw = curl_exec($ch);
+    $errno = curl_errno($ch);
+    $error = curl_error($ch);
+    $status = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    curl_close($ch);
+
+    if ($errno) {
+        return ['ok' => false, 'error' => $error ?: 'STT cURL error'];
+    }
+
+    $decoded = json_decode((string) $raw, true);
+    if ($status >= 400 || !is_array($decoded)) {
+        $msg = is_array($decoded) ? (string) ($decoded['detail'] ?? $decoded['error'] ?? 'STT HTTP ' . $status) : ('STT HTTP ' . $status);
+        return ['ok' => false, 'error' => $msg];
+    }
+
+    $transcript = trim((string) ($decoded['heard'] ?? ''));
+    return [
+        'ok' => true,
+        'data' => [
+            'transcript' => $transcript,
+            'feedback' => [
+                'ok' => (bool) ($decoded['ok'] ?? ($transcript !== '')),
+                'score' => (int) ($decoded['score'] ?? 3),
+                'note' => (string) ($decoded['note'] ?? ''),
+                'better' => $decoded['better'] ?? null,
+            ],
+            'source' => (string) ($decoded['source'] ?? 'whisper-local'),
+        ],
+    ];
+}

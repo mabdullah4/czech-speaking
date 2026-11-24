@@ -1,0 +1,28 @@
+# Czech speaking STT (Contabo)
+
+CPU Whisper (`faster-whisper`, model `base`) for speaking.numbertools.eu listen/score.
+
+## Deploy
+
+```bash
+# on Contabo
+cd /opt/czech-speaking-stt
+cp .env.example .env   # set STT_API_KEY
+docker compose up -d --build
+curl http://127.0.0.1:8091/health
+```
+
+Speaking site `config.local.php`:
+
+```php
+'stt_url' => 'http://169.58.149.75:8091',
+'stt_api_key' => '…',
+```
+
+## Models
+
+| Model | RAM (int8) | Quality |
+|-------|------------|---------|
+| `tiny` | ~0.4 GB | weakest |
+| `base` | ~0.5 GB | **default** — good for A2 |
+| `small` | ~1.3 GB | better; set `WHISPER_MODEL=small` if RAM allows |

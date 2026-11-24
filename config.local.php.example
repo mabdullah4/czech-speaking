@@ -10,6 +10,9 @@ return [
         'YOUR_PRIMARY_GOOGLE_API_KEY',
         'YOUR_FALLBACK_GOOGLE_API_KEY',
     ],
+    // Local Whisper on Contabo VPS (preferred for listen/score — no Gemini quota):
+    // 'stt_url' => 'http://169.58.149.75:8091',
+    // 'stt_api_key' => 'same-as-stt-server-STT_API_KEY',
     // Optional overrides:
     // 'tts_model' => 'gemini-3.8-flash-lite-tts',
     // 'listen_model' => 'gemini-3.5-flash-lite',

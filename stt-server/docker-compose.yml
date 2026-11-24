@@ -1,0 +1,21 @@
+services:
+  czech-stt:
+    build: .
+    container_name: czech-speaking-stt
+    restart: unless-stopped
+    ports:
+      # Reachable from Hostinger PHP (API key required). Tighten with Contabo firewall later.
+      - "8091:8091"
+    environment:
+      WHISPER_MODEL: base
+      WHISPER_DEVICE: cpu
+      WHISPER_COMPUTE: int8
+      WHISPER_THREADS: "3"
+      STT_API_KEY: ${STT_API_KEY}
+    volumes:
+      - whisper-cache:/root/.cache
+    mem_limit: 2g
+    cpus: "3.0"
+
+volumes:
+  whisper-cache:

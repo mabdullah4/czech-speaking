@@ -46,6 +46,8 @@ $GOOGLE_API_KEY = $GOOGLE_API_KEYS[0] ?? '';
 $TTS_MODEL = $local['tts_model'] ?? 'gemini-3.8-flash-lite-tts';
 $LISTEN_MODEL = $local['listen_model'] ?? 'gemini-3.5-flash-lite';
 $VOICE_NAME = $local['voice'] ?? 'Kore';
+$STT_URL = trim((string) ($local['stt_url'] ?? getenv('STT_URL') ?: ''));
+$STT_API_KEY = trim((string) ($local['stt_api_key'] ?? getenv('STT_API_KEY') ?: ''));
 
 function json_response(array $payload, int $status = 200): void
 {
