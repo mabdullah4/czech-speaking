@@ -727,16 +727,7 @@
     if (mediaRecorder) stopRecording();
   });
 
-  skipBtn.addEventListener("click", () => {
-    if (busy) return;
-    setStatus(
-      examStatus,
-      `Skip disabled — you need ${PASS_SCORE}/5 before the next question.`,
-      true,
-    );
-  });
-
-  nextBtn.addEventListener("click", () => {
+  nextBtn?.addEventListener("click", () => {
     if (busy) return;
     setStatus(
       examStatus,
