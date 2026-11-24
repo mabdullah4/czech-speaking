@@ -13,7 +13,6 @@
   const qText = document.querySelector("#qText");
   const replayBtn = document.querySelector("#replayBtn");
   const recordBtn = document.querySelector("#recordBtn");
-  const skipBtn = document.querySelector("#skipBtn");
   const stopExamBtn = document.querySelector("#stopExamBtn");
   const nextBtn = document.querySelector("#nextBtn");
   const answerBox = document.querySelector("#answerBox");
@@ -265,8 +264,7 @@
   const setBusyUi = (on) => {
     replayBtn.disabled = on;
     recordBtn.disabled = on;
-    skipBtn.disabled = on;
-    nextBtn.disabled = on;
+    if (nextBtn) nextBtn.disabled = on;
   };
 
   const renderQuestion = async ({ autoSpeak = true } = {}) => {
