@@ -51,6 +51,9 @@
   let recordStartedAt = 0;
   let playbackRate = 1;
   let selectingLocked = false;
+  /** @type {Map<number, Promise<{audio:string,mime:string}>>} */
+  let audioCache = new Map();
+  let prefetchReady = 0;
 
   const escapeHtml = (value) =>
     String(value).replace(
@@ -162,15 +165,67 @@
     return data;
   };
 
-  const speakQuestion = async (text) => {
-    setStatus(examStatus, "Examiner is speaking…");
-    const data = await apiJson("api/speak.php", {
+  const fetchTts = (text) =>
+    apiJson("api/speak.php", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ text }),
     });
-    await playBase64Audio(data.audio, data.mime || "audio/wav");
-    setStatus(examStatus, "Your turn — press the button and answer in one sentence.");
+
+  const ensureAudio = (qi) => {
+    if (!session?.questions?.[qi]) {
+      return Promise.reject(new Error("No question"));
+    }
+    if (audioCache.has(qi)) return audioCache.get(qi);
+    const text = session.questions[qi].question;
+    const promise = fetchTts(text)
+      .then((data) => {
+        prefetchReady += 1;
+        return { audio: data.audio, mime: data.mime || "audio/wav" };
+      })
+      .catch((err) => {
+        audioCache.delete(qi);
+        throw err;
+      });
+    audioCache.set(qi, promise);
+    return promise;
+  };
+
+  /** Prefetch all session audio with limited concurrency so Gemini isn't hammered. */
+  const prefetchAllAudio = (preferFirst = true) => {
+    if (!session?.questions?.length) return;
+    const total = session.questions.length;
+    const order = preferFirst
+      ? [0, ...Array.from({ length: total - 1 }, (_, i) => i + 1)]
+      : Array.from({ length: total }, (_, i) => i);
+    const pending = order.filter((i) => !audioCache.has(i));
+    const limit = 3;
+    let cursor = 0;
+    const worker = async () => {
+      while (cursor < pending.length) {
+        const qi = pending[cursor];
+        cursor += 1;
+        try {
+          await ensureAudio(qi);
+        } catch {
+          // Individual failures retry later on demand
+        }
+      }
+    };
+    const runners = Array.from({ length: Math.min(limit, pending.length) }, () =>
+      worker(),
+    );
+    return Promise.all(runners);
+  };
+
+  const speakQuestionAt = async (qi) => {
+    setStatus(examStatus, "Examiner is speaking…");
+    const data = await ensureAudio(qi);
+    await playBase64Audio(data.audio, data.mime);
+    setStatus(
+      examStatus,
+      "Your turn — press the button and answer in one sentence.",
+    );
   };
 
   const currentQuestion = () => session?.questions?.[index] || null;
@@ -212,11 +267,18 @@
     updateProgress();
     renderTopics(session.topics.map((t) => t.id));
 
+    // Keep ahead of the user: warm the next couple while this one plays.
+    ensureAudio(index + 1).catch(() => {});
+    ensureAudio(index + 2).catch(() => {});
+
     if (autoSpeak) {
       try {
         busy = true;
         setBusyUi(true);
-        await speakQuestion(q.question);
+        if (!audioCache.has(index)) {
+          setStatus(examStatus, "Preparing examiner audio…");
+        }
+        await speakQuestionAt(index);
       } catch (err) {
         setStatus(examStatus, err.message, true);
       } finally {
@@ -337,8 +399,14 @@
     }
   };
 
+  const clearAudioCache = () => {
+    audioCache = new Map();
+    prefetchReady = 0;
+  };
+
   const finishSession = () => {
     stopPlayback();
+    clearAudioCache();
     showPanel("summary");
     pageTitle.textContent = "Summary";
     topMeta.innerHTML = `Completed <strong>${answers.length} answers</strong>`;
@@ -376,8 +444,17 @@
       session = await apiJson(buildSessionUrl());
       index = 0;
       answers = [];
+      clearAudioCache();
       showPanel("exam");
       setStatus(homeStatus, "");
+      setStatus(
+        examStatus,
+        `Preparing examiner audio (1/${session.questions.length})…`,
+      );
+      // Generate Q1 first so we can start quickly; rest fill in the background.
+      const firstReady = ensureAudio(0);
+      prefetchAllAudio(true);
+      await firstReady;
       await renderQuestion({ autoSpeak: true });
     } catch (err) {
       setStatus(homeStatus, err.message, true);
@@ -466,6 +543,8 @@
   startBtn.addEventListener("click", startSession);
   againBtn.addEventListener("click", startSession);
   homeBtn.addEventListener("click", () => {
+    stopPlayback();
+    clearAudioCache();
     showPanel("home");
     pageTitle.textContent = "Otázky";
     index = 0;
@@ -489,7 +568,7 @@
     try {
       busy = true;
       setBusyUi(true);
-      await speakQuestion(q.question);
+      await speakQuestionAt(index);
     } catch (err) {
       setStatus(examStatus, err.message, true);
     } finally {
