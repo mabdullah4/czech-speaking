@@ -49,7 +49,11 @@ if ($sttUrl !== '') {
     if ($localResult['ok']) {
         json_response($localResult['data']);
     }
-    // Fall through to Gemini if VPS is down
+    // Do not fall through to Gemini — it is minutes-slow when overloaded.
+    json_response([
+        'error' => $localResult['error'] ?? 'Local speech recognition failed. Try again.',
+        'source' => 'whisper-local',
+    ], 502);
 }
 
 require_api_key();

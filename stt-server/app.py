@@ -14,10 +14,10 @@ from faster_whisper import WhisperModel
 from pydantic import BaseModel, Field
 
 API_KEY = os.environ.get("STT_API_KEY", "").strip()
-MODEL_NAME = os.environ.get("WHISPER_MODEL", "base")
+MODEL_NAME = os.environ.get("WHISPER_MODEL", "tiny")
 DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 COMPUTE = os.environ.get("WHISPER_COMPUTE", "int8")
-CPU_THREADS = int(os.environ.get("WHISPER_THREADS", "3"))
+CPU_THREADS = int(os.environ.get("WHISPER_THREADS", "4"))
 
 model: WhisperModel | None = None
 
@@ -272,8 +272,11 @@ def transcribe_file(path: Path) -> str:
         str(path),
         language="cs",
         beam_size=1,
+        best_of=1,
         vad_filter=True,
+        vad_parameters=dict(min_silence_duration_ms=300),
         condition_on_previous_text=False,
+        without_timestamps=True,
     )
     parts = [seg.text.strip() for seg in segments if seg.text and seg.text.strip()]
     return " ".join(parts).strip()

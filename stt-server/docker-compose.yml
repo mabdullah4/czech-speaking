@@ -7,10 +7,10 @@ services:
       # Reachable from Hostinger PHP (API key required). Tighten with Contabo firewall later.
       - "8091:8091"
     environment:
-      WHISPER_MODEL: base
+      WHISPER_MODEL: tiny
       WHISPER_DEVICE: cpu
       WHISPER_COMPUTE: int8
-      WHISPER_THREADS: "3"
+      WHISPER_THREADS: "4"
       STT_API_KEY: ${STT_API_KEY}
     volumes:
       - whisper-cache:/root/.cache

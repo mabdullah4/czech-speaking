@@ -331,12 +331,26 @@
     if (busy || mediaRecorder) return;
     stopPlayback();
     try {
-      mediaStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      mediaStream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          channelCount: 1,
+        },
+      });
       chunks = [];
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
-      mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mime });
+      // Low bitrate keeps Hostinger→VPS uploads fast for short A2 answers.
+      try {
+        mediaRecorder = new MediaRecorder(mediaStream, {
+          mimeType: mime,
+          audioBitsPerSecond: 24000,
+        });
+      } catch {
+        mediaRecorder = new MediaRecorder(mediaStream, { mimeType: mime });
+      }
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
       };
@@ -449,7 +463,7 @@
 
     busy = true;
     setBusyUi(true);
-    setStatus(examStatus, "Checking your answer…");
+    setStatus(examStatus, "Transcribing (Whisper on VPS)…");
 
     try {
       const { transcript, feedback } = await gradeAnswer(blob, q.question);
