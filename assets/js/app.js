@@ -165,11 +165,45 @@
     return data;
   };
 
+  // Free-tier TTS ≈ 3 RPM — one request at a time; server also caches + throttles.
+  let ttsQueue = Promise.resolve();
+  const enqueueTts = (task) => {
+    const run = ttsQueue.then(task, task);
+    ttsQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    return run;
+  };
+
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
   const fetchTts = (text) =>
-    apiJson("api/speak.php", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text }),
+    enqueueTts(async () => {
+      let attempt = 0;
+      while (attempt < 4) {
+        attempt += 1;
+        const res = await fetch("api/speak.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text }),
+        });
+        const data = await res.json().catch(() => ({}));
+        if (res.ok) {
+          return data;
+        }
+        const retryAfter = Number(data.retry_after) || 22;
+        if (res.status === 429 || /rate/i.test(String(data.error || ""))) {
+          setStatus(
+            examStatus,
+            `TTS limit — waiting ${retryAfter}s (free tier: 3/min)…`,
+          );
+          await sleep(retryAfter * 1000);
+          continue;
+        }
+        throw new Error(data.error || `TTS failed (${res.status})`);
+      }
+      throw new Error("TTS rate limit exceeded. Wait a minute and continue.");
     });
 
   const ensureAudio = (qi) => {
@@ -191,31 +225,19 @@
     return promise;
   };
 
-  /** Prefetch all session audio with limited concurrency so Gemini isn't hammered. */
-  const prefetchAllAudio = (preferFirst = true) => {
+  /** Prefetch remaining questions one-by-one (respects 3/min via queue + server). */
+  const prefetchRestAudio = () => {
     if (!session?.questions?.length) return;
-    const total = session.questions.length;
-    const order = preferFirst
-      ? [0, ...Array.from({ length: total - 1 }, (_, i) => i + 1)]
-      : Array.from({ length: total }, (_, i) => i);
-    const pending = order.filter((i) => !audioCache.has(i));
-    const limit = 3;
-    let cursor = 0;
-    const worker = async () => {
-      while (cursor < pending.length) {
-        const qi = pending[cursor];
-        cursor += 1;
+    const chain = async () => {
+      for (let qi = 0; qi < session.questions.length; qi += 1) {
         try {
           await ensureAudio(qi);
         } catch {
-          // Individual failures retry later on demand
+          // retry on demand when that question is shown
         }
       }
     };
-    const runners = Array.from({ length: Math.min(limit, pending.length) }, () =>
-      worker(),
-    );
-    return Promise.all(runners);
+    return chain();
   };
 
   const speakQuestionAt = async (qi) => {
@@ -267,9 +289,8 @@
     updateProgress();
     renderTopics(session.topics.map((t) => t.id));
 
-    // Keep ahead of the user: warm the next couple while this one plays.
+    // Warm only the next question — free tier can't handle parallel bursts.
     ensureAudio(index + 1).catch(() => {});
-    ensureAudio(index + 2).catch(() => {});
 
     if (autoSpeak) {
       try {
@@ -451,10 +472,9 @@
         examStatus,
         `Preparing examiner audio (1/${session.questions.length})…`,
       );
-      // Generate Q1 first so we can start quickly; rest fill in the background.
-      const firstReady = ensureAudio(0);
-      prefetchAllAudio(true);
-      await firstReady;
+      // One at a time: start after Q1 is ready; rest prefetch slowly in background.
+      await ensureAudio(0);
+      prefetchRestAudio();
       await renderQuestion({ autoSpeak: true });
     } catch (err) {
       setStatus(homeStatus, err.message, true);

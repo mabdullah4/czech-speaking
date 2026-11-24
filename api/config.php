@@ -137,6 +137,63 @@ function gemini_extract_json_object(array $json): ?array
     return is_array($decoded) ? $decoded : null;
 }
 
+function storage_dir(string $subdir): string
+{
+    $dir = dirname(__DIR__) . '/storage/' . $subdir;
+    if (!is_dir($dir)) {
+        mkdir($dir, 0755, true);
+    }
+    return $dir;
+}
+
+/**
+ * Free-tier TTS is ~3 RPM. Wait until a slot is free (or give up).
+ * Cached responses should call this only before live Gemini calls.
+ */
+function tts_rate_limit_wait(int $maxPerMinute = 3, int $maxWaitSeconds = 75): bool
+{
+    $file = storage_dir('tts') . '/rate-limit.json';
+    $lockPath = storage_dir('tts') . '/rate-limit.lock';
+    $lock = fopen($lockPath, 'c+');
+    if ($lock === false) {
+        return true;
+    }
+    if (!flock($lock, LOCK_EX)) {
+        fclose($lock);
+        return true;
+    }
+
+    $deadline = microtime(true) + $maxWaitSeconds;
+    $ok = false;
+    while (microtime(true) < $deadline) {
+        $times = [];
+        if (is_readable($file)) {
+            $decoded = json_decode((string) file_get_contents($file), true);
+            if (is_array($decoded)) {
+                $times = array_values(array_filter(
+                    array_map('floatval', $decoded),
+                    static fn(float $t): bool => $t > microtime(true) - 60,
+                ));
+            }
+        }
+        if (count($times) < $maxPerMinute) {
+            $times[] = microtime(true);
+            file_put_contents($file, json_encode($times));
+            $ok = true;
+            break;
+        }
+        $oldest = min($times);
+        $sleep = max(0.25, ($oldest + 60) - microtime(true) + 0.35);
+        flock($lock, LOCK_UN);
+        usleep((int) min($sleep, 5) * 1_000_000);
+        flock($lock, LOCK_EX);
+    }
+
+    flock($lock, LOCK_UN);
+    fclose($lock);
+    return $ok;
+}
+
 function pcm_to_wav(string $pcm, int $sampleRate = 24000, int $channels = 1, int $bits = 16): string
 {
     $dataSize = strlen($pcm);
