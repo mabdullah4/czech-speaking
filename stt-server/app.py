@@ -240,7 +240,7 @@ def grade_a2(question: str, heard: str) -> dict:
             "better": None,
         }
 
-    # Relevant full sentence: strict bar for 4/5
+    # Relevant full sentence: 4/5 only when on-topic + real sentence
     if n >= 6 and has_verb and relevant:
         return {
             "ok": True,
@@ -249,7 +249,7 @@ def grade_a2(question: str, heard: str) -> dict:
             "better": None,
         }
 
-    if n >= 4 and has_verb and relevant:
+    if n >= 3 and has_verb and relevant:
         return {
             "ok": True,
             "score": 4,
@@ -257,7 +257,7 @@ def grade_a2(question: str, heard: str) -> dict:
             "better": None,
         }
 
-    # Relevant but thin
+    # Relevant but somehow still thin
     return {
         "ok": True,
         "score": 3,
