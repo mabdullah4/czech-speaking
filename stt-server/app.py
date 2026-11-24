@@ -14,7 +14,7 @@ from faster_whisper import WhisperModel
 from pydantic import BaseModel, Field
 
 API_KEY = os.environ.get("STT_API_KEY", "").strip()
-MODEL_NAME = os.environ.get("WHISPER_MODEL", "tiny")
+MODEL_NAME = os.environ.get("WHISPER_MODEL", "base")
 DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 COMPUTE = os.environ.get("WHISPER_COMPUTE", "int8")
 CPU_THREADS = int(os.environ.get("WHISPER_THREADS", "4"))
