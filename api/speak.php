@@ -2,7 +2,6 @@
 declare(strict_types=1);
 
 require __DIR__ . '/config.php';
-require_api_key();
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     json_response(['error' => 'POST required'], 405);
@@ -16,6 +15,42 @@ if ($text === '') {
     json_response(['error' => 'Missing text'], 400);
 }
 
+/**
+ * Prefer pre-baked Piper clips so practice never depends on Gemini TTS quota.
+ * File id = first 40 hex chars of sha256(utf8 text).
+ */
+function static_question_audio(string $text): ?array
+{
+    $id = substr(hash('sha256', $text), 0, 40);
+    $base = dirname(__DIR__) . '/assets/audio/questions/' . $id;
+    foreach (['mp3' => 'audio/mpeg', 'wav' => 'audio/wav'] as $ext => $mime) {
+        $path = $base . '.' . $ext;
+        if (!is_readable($path)) {
+            continue;
+        }
+        $bytes = file_get_contents($path);
+        if ($bytes === false || $bytes === '') {
+            continue;
+        }
+        return [
+            'mime' => $mime,
+            'audio' => base64_encode($bytes),
+            'url' => 'assets/audio/questions/' . $id . '.' . $ext,
+            'cached' => true,
+            'source' => 'static',
+        ];
+    }
+    return null;
+}
+
+$static = static_question_audio($text);
+if ($static !== null) {
+    json_response($static);
+}
+
+// Fallback: Gemini TTS (needs API keys; may hit free-tier limits)
+require_api_key();
+
 $cacheKey = hash('sha256', $TTS_MODEL . "\n" . $VOICE_NAME . "\n" . $style . "\n" . $text);
 $cacheFile = storage_dir('tts') . '/' . $cacheKey . '.json';
 
@@ -26,6 +61,7 @@ if (is_readable($cacheFile)) {
             'mime' => (string) $cached['mime'],
             'audio' => (string) $cached['audio'],
             'cached' => true,
+            'source' => 'gemini-cache',
         ]);
     }
 }
@@ -54,7 +90,6 @@ $payload = [
 $result = gemini_tts_failover($GOOGLE_API_KEYS, $payload, 90);
 
 if (!$result['ok'] && gemini_is_rate_limited($result)) {
-    // Brief pause then one more pass across keys
     sleep(12);
     $result = gemini_tts_failover($GOOGLE_API_KEYS, $payload, 90);
 }
@@ -64,6 +99,7 @@ if (!$result['ok']) {
     json_response([
         'error' => $result['error'] ?? 'TTS failed',
         'retry_after' => $status === 429 ? 25 : null,
+        'hint' => 'Question audio missing from assets/audio/questions — regenerate with tools/generate-question-audio.py',
     ], $status);
 }
 
@@ -99,5 +135,6 @@ file_put_contents($cacheFile, json_encode($out));
 
 json_response($out + [
     'cached' => false,
+    'source' => 'gemini',
     'key_index' => $result['key_index'] ?? 0,
 ]);

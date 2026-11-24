@@ -100,6 +100,7 @@ jobs:
               --exclude='.DS_Store' \
               --exclude='.scratch/' \
               --exclude='.impeccable/' \
+              --exclude='tools/piper/' \
               --exclude='config.local.php' \
               -e "${SSH_E}" \
               ./ "${SSH_USER}@${SSH_HOST}:${DEPLOY_PATH}/"; then

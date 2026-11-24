@@ -27,11 +27,23 @@ Allow microphone access when the browser asks.
 ## Flow
 
 1. **Start practice** — 2 topics appear in the sidebar (highlighted).
-2. Examiner speaks each question (Gemini TTS).
+2. Examiner speaks each question (pre-baked Piper Czech audio — no TTS quota).
 3. **Hold to answer** — record your reply; Gemini transcribes and briefly scores it.
 4. Continue through 8 questions, then see a summary.
 
 Optional: **Show question text** if you want to read as well as listen.
+
+## Examiner audio
+
+All 289 questions are stored as MP3 under `assets/audio/questions/` (Piper `cs_CZ-jirka-low`).  
+`api/speak.php` serves those first; Gemini TTS is only a fallback.
+
+To regenerate after editing questions:
+
+```bash
+# needs tools/piper binary + voices (see tools/generate-question-audio.py)
+python3 tools/generate-question-audio.py
+```
 
 ## Source
 

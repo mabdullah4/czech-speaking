@@ -133,27 +133,31 @@
     }
   };
 
-  const playBase64Audio = async (b64, mime = "audio/wav") => {
+  const playAudioUrl = async (url, revokeOnEnd = false) => {
     stopPlayback();
-    const binary = atob(b64);
-    const bytes = new Uint8Array(binary.length);
-    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
-    const blob = new Blob([bytes], { type: mime });
-    const url = URL.createObjectURL(blob);
     const audio = new Audio(url);
     audio.playbackRate = playbackRate;
     currentAudio = audio;
     await new Promise((resolve, reject) => {
       audio.onended = () => {
-        URL.revokeObjectURL(url);
+        if (revokeOnEnd) URL.revokeObjectURL(url);
         resolve();
       };
       audio.onerror = () => {
-        URL.revokeObjectURL(url);
+        if (revokeOnEnd) URL.revokeObjectURL(url);
         reject(new Error("Audio playback failed"));
       };
       audio.play().catch(reject);
     });
+  };
+
+  const playBase64Audio = async (b64, mime = "audio/wav") => {
+    const binary = atob(b64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i += 1) bytes[i] = binary.charCodeAt(i);
+    const blob = new Blob([bytes], { type: mime });
+    const url = URL.createObjectURL(blob);
+    await playAudioUrl(url, true);
   };
 
   const apiJson = async (url, options = {}) => {
@@ -165,46 +169,34 @@
     return data;
   };
 
-  // Free-tier TTS ≈ 3 RPM — one request at a time; server also caches + throttles.
-  let ttsQueue = Promise.resolve();
-  const enqueueTts = (task) => {
-    const run = ttsQueue.then(task, task);
-    ttsQueue = run.then(
-      () => undefined,
-      () => undefined,
-    );
-    return run;
-  };
-
   const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
-  const fetchTts = (text) =>
-    enqueueTts(async () => {
-      let attempt = 0;
-      while (attempt < 4) {
-        attempt += 1;
-        const res = await fetch("api/speak.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (res.ok) {
-          return data;
-        }
-        const retryAfter = Number(data.retry_after) || 22;
-        if (res.status === 429 || /rate/i.test(String(data.error || ""))) {
-          setStatus(
-            examStatus,
-            `TTS limit — waiting ${retryAfter}s (free tier: 3/min)…`,
-          );
-          await sleep(retryAfter * 1000);
-          continue;
-        }
-        throw new Error(data.error || `TTS failed (${res.status})`);
+  const fetchTts = async (text) => {
+    let attempt = 0;
+    while (attempt < 4) {
+      attempt += 1;
+      const res = await fetch("api/speak.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        return data;
       }
-      throw new Error("TTS rate limit exceeded. Wait a minute and continue.");
-    });
+      const retryAfter = Number(data.retry_after) || 22;
+      if (res.status === 429 || /rate/i.test(String(data.error || ""))) {
+        setStatus(
+          examStatus,
+          `TTS limit — waiting ${retryAfter}s…`,
+        );
+        await sleep(retryAfter * 1000);
+        continue;
+      }
+      throw new Error(data.error || `TTS failed (${res.status})`);
+    }
+    throw new Error("TTS rate limit exceeded. Wait a minute and continue.");
+  };
 
   const ensureAudio = (qi) => {
     if (!session?.questions?.[qi]) {
@@ -215,7 +207,12 @@
     const promise = fetchTts(text)
       .then((data) => {
         prefetchReady += 1;
-        return { audio: data.audio, mime: data.mime || "audio/wav" };
+        return {
+          audio: data.audio || null,
+          mime: data.mime || "audio/mpeg",
+          url: data.url || null,
+          source: data.source || null,
+        };
       })
       .catch((err) => {
         audioCache.delete(qi);
@@ -225,7 +222,7 @@
     return promise;
   };
 
-  /** Prefetch remaining questions one-by-one (respects 3/min via queue + server). */
+  /** Prefetch remaining question audio in the background (static files are instant). */
   const prefetchRestAudio = () => {
     if (!session?.questions?.length) return;
     const chain = async () => {
@@ -243,7 +240,13 @@
   const speakQuestionAt = async (qi) => {
     setStatus(examStatus, "Examiner is speaking…");
     const data = await ensureAudio(qi);
-    await playBase64Audio(data.audio, data.mime);
+    if (data.url) {
+      await playAudioUrl(data.url);
+    } else if (data.audio) {
+      await playBase64Audio(data.audio, data.mime);
+    } else {
+      throw new Error("No audio for this question");
+    }
     setStatus(
       examStatus,
       "Your turn — press the button and answer in one sentence.",
