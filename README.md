@@ -39,6 +39,5 @@ Questions are drawn from `Speaking-T1.pdf` (iLearnCzech A2 oral materials), orga
 
 ## Production
 
-- Live: `https://vocabulary.numbertools.io/speaking/`
-- Canonical (after `.eu` cutover): `https://speaking.numbertools.eu`
+- Live: `https://speaking.numbertools.eu/`
 - Deploy: GitHub Actions → Hostinger — see [`docs/deploy-hostinger.md`](docs/deploy-hostinger.md)
