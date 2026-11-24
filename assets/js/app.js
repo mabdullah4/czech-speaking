@@ -35,6 +35,9 @@
 
   const rateStorageKey = "speaking-t1-speech-rate";
   const topicsStorageKey = "speaking-t1-selected-topics";
+  const questionCountStorageKey = "speaking-t1-question-count";
+
+  const questionCountSelect = document.querySelector("#questionCount");
 
   let topicsCatalog = [];
   let selectedTopicIds = new Set();
@@ -50,6 +53,7 @@
   let recordPointerId = null;
   let recordStartedAt = 0;
   let playbackRate = 1;
+  let questionCount = 4;
   let selectingLocked = false;
   /** @type {Map<number, Promise<{audio:string,mime:string,url?:string|null}>>} */
   let audioCache = new Map();
@@ -498,8 +502,23 @@
       .join("");
   };
 
+  const syncQuestionCountUi = () => {
+    if (questionCountSelect) {
+      questionCountSelect.value = String(questionCount);
+    }
+    progressLabel.textContent = `/ ${questionCount}`;
+    topMeta.innerHTML = `Practice <strong>${questionCount} questions</strong>`;
+  };
+
+  const setQuestionCount = (value) => {
+    const n = Number(value) || 4;
+    questionCount = Math.max(1, Math.min(20, n));
+    localStorage.setItem(questionCountStorageKey, String(questionCount));
+    syncQuestionCountUi();
+  };
+
   const buildSessionUrl = () => {
-    const params = new URLSearchParams({ per: "4" });
+    const params = new URLSearchParams({ total: String(questionCount) });
     if (selectedTopicIds.size) {
       params.set("ids", [...selectedTopicIds].join(","));
     } else {
@@ -565,8 +584,8 @@
       renderTopics();
       const totalQs = topicsCatalog.reduce((sum, t) => sum + t.count, 0);
       progressCount.textContent = "0";
-      progressLabel.textContent = `/ 8`;
-      topMeta.innerHTML = `Bank <strong>${totalQs} questions · ${topicsCatalog.length} topics</strong>`;
+      syncQuestionCountUi();
+      topMeta.innerHTML = `Bank <strong>${totalQs} questions · ${topicsCatalog.length} topics</strong> · session <strong>${questionCount}</strong>`;
     } catch (err) {
       setStatus(homeStatus, err.message, true);
     }
@@ -607,9 +626,15 @@
   speechRateExam.addEventListener("change", () =>
     syncRateSelects(speechRateExam.value),
   );
+  questionCountSelect?.addEventListener("change", () =>
+    setQuestionCount(questionCountSelect.value),
+  );
 
   const savedRate = localStorage.getItem(rateStorageKey);
   if (savedRate) syncRateSelects(savedRate);
+  const savedCount = localStorage.getItem(questionCountStorageKey);
+  if (savedCount) setQuestionCount(savedCount);
+  else syncQuestionCountUi();
 
   startBtn.addEventListener("click", startSession);
   againBtn.addEventListener("click", startSession);

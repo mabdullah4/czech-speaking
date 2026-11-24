@@ -41,7 +41,7 @@
             Study desk <span aria-hidden="true">/</span> Speaking T1
           </div>
           <div class="top-meta" id="topMeta">
-            Practice <strong>2 topics · 4 questions each</strong>
+            Practice <strong>4 questions</strong>
           </div>
         </header>
 
@@ -51,7 +51,7 @@
             <h1 id="pageTitle">Otázky</h1>
           </div>
           <div class="word-total">
-            <strong id="progressCount">0</strong><span id="progressLabel">/ 8</span>
+            <strong id="progressCount">0</strong><span id="progressLabel">/ 4</span>
           </div>
         </section>
 
@@ -63,11 +63,21 @@
           <div class="hero-panel" id="homePanel">
             <p>
               Procvičujte ústní část A2: vyberte témata vlevo (nebo nechte
-              prázdné → náhodná <strong>2 témata</strong>). Z každého dostanete
-              <strong>4 otázky</strong>. Otázky uslyšíte od Google AI; odpověď
-              nahrajete mikrofonem.
+              prázdné → náhodná <strong>2 témata</strong>). Zvolte počet otázek
+              (výchozí <strong>4</strong>). Otázky uslyšíte; odpověď nahrajete mikrofonem.
             </p>
             <div class="setup-bar" aria-label="Practice settings">
+              <label class="setup-field" for="questionCount">
+                <span class="field-label">Questions</span>
+                <select id="questionCount" aria-label="Number of questions">
+                  <option value="2">2</option>
+                  <option value="4" selected>4</option>
+                  <option value="6">6</option>
+                  <option value="8">8</option>
+                  <option value="10">10</option>
+                  <option value="12">12</option>
+                </select>
+              </label>
               <label class="setup-field" for="speechRate">
                 <span class="field-label">Speech speed</span>
                 <select id="speechRate" aria-label="Speech playback speed">

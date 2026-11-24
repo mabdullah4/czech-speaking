@@ -54,17 +54,19 @@ if ($sttUrl !== '') {
 
 require_api_key();
 
-$prompt = "Otázka examinátora: {$question}\n\n"
-    . "Přepiš nahrávku kandidáta doslova (čeština, s diakritikou, bez oprav) "
-    . "a ohodnoť odpověď pro ústní A2 (trvalý pobyt). "
-    . "Odpověď má být jedna celá věta.\n"
-    . 'Vrať JSON: {"heard":"...","ok":true|false,"score":1-5,"note":"krátký feedback česky","better":"vzorová odpověď nebo null"}. '
-    . 'Pokud není srozumitelná řeč: {"heard":"","ok":false,"score":1,"note":"Nerozumím.","better":null}';
+$prompt = "Exam question (Czech): {$question}\n\n"
+    . "Transcribe the learner audio verbatim in Czech (keep mistakes, keep diacritics). "
+    . "Then grade strictly for A2 oral exam (permanent residence).\n"
+    . "Rules: must be ONE full sentence; must make sense as an answer to THIS question. "
+    . "Score 4–5 ONLY if the answer is on-topic AND a clear full sentence. "
+    . "Short yes/no alone, off-topic, or fragmentary answers = max 2–3.\n"
+    . 'Return JSON only: {"heard":"...","ok":true|false,"score":1-5,"note":"short English feedback naming the problem or success","better":"optional model Czech sentence or null"}. '
+    . 'If unintelligible: {"heard":"","ok":false,"score":1,"note":"No clear speech detected.","better":null}';
 
 $result = gemini_interactions_failover($GOOGLE_API_KEYS, [
     'model' => $LISTEN_MODEL,
-    'system_instruction' => 'You are a Czech A2 oral-exam examiner. '
-        . 'Transcribe then grade. Output JSON only, no markdown.',
+    'system_instruction' => 'You are a strict Czech A2 oral-exam examiner. '
+        . 'Feedback notes must be in English. Output JSON only, no markdown.',
     'input' => [
         [
             'type' => 'text',

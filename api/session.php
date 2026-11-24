@@ -16,10 +16,11 @@ if (!is_array($payload) || empty($payload['topics'])) {
 $allTopics = $payload['topics'];
 $availableIds = array_keys($allTopics);
 
-$questionsPerTopic = isset($_GET['per']) ? (int) $_GET['per'] : 4;
-$questionsPerTopic = max(1, min(10, $questionsPerTopic));
+// Total questions in the session (default 4)
+$totalWanted = isset($_GET['total']) ? (int) $_GET['total'] : (isset($_GET['per']) ? (int) $_GET['per'] : 4);
+$totalWanted = max(1, min(20, $totalWanted));
 
-// Specific topic IDs: ?ids=bydleni,prace  (comma-separated)
+// Specific topic IDs: ?ids=bydleni,prace
 $requestedIds = [];
 $idsParam = trim((string) ($_GET['ids'] ?? ''));
 if ($idsParam !== '') {
@@ -42,24 +43,21 @@ if ($requestedIds) {
     $pickedIds = array_slice($ids, 0, $topicsWanted);
 }
 
-$sessionTopics = [];
-$flatQuestions = [];
-
+$pool = [];
+$sessionTopicsMeta = [];
 foreach ($pickedIds as $id) {
     $topic = $allTopics[$id];
-    $pool = $topic['questions'] ?? [];
-    if (!$pool) {
+    $qs = $topic['questions'] ?? [];
+    if (!$qs) {
         continue;
     }
-    shuffle($pool);
-    $chosen = array_slice($pool, 0, min($questionsPerTopic, count($pool)));
-    $sessionTopics[] = [
+    $sessionTopicsMeta[$id] = [
         'id' => $id,
         'name' => $topic['name'],
-        'count' => count($chosen),
+        'count' => 0,
     ];
-    foreach ($chosen as $q) {
-        $flatQuestions[] = [
+    foreach ($qs as $q) {
+        $pool[] = [
             'topicId' => $id,
             'topic' => $topic['name'],
             'subtopic' => $q['subtopic'] ?? null,
@@ -68,9 +66,24 @@ foreach ($pickedIds as $id) {
     }
 }
 
-if (!$flatQuestions) {
+if (!$pool) {
     json_response(['error' => 'No questions for selected topics'], 400);
 }
+
+shuffle($pool);
+$flatQuestions = array_slice($pool, 0, min($totalWanted, count($pool)));
+
+foreach ($flatQuestions as $q) {
+    $tid = $q['topicId'];
+    if (isset($sessionTopicsMeta[$tid])) {
+        $sessionTopicsMeta[$tid]['count'] += 1;
+    }
+}
+
+$sessionTopics = array_values(array_filter(
+    $sessionTopicsMeta,
+    static fn(array $t): bool => ($t['count'] ?? 0) > 0,
+));
 
 json_response([
     'topics' => $sessionTopics,

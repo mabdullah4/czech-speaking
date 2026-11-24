@@ -16,16 +16,18 @@ if ($question === '' || $answer === '') {
     json_response(['error' => 'Missing question or answer'], 400);
 }
 
-$prompt = "Jsi examinátor ústní části české zkoušky A2 (trvalý pobyt).\n"
-    . "Hodnoť stručně odpověď kandidáta.\n\n"
-    . "Pravidla: odpověď má být jedna celá věta (ne jedno slovo, ne dlouhý monolog).\n\n"
-    . "Otázka: {$question}\n"
-    . "Odpověď kandidáta: {$answer}\n\n"
-    . 'Vrať JSON: {"ok":true|false,"score":1-5,"note":"krátký feedback česky","better":"vzorová odpověď nebo null"}';
+$prompt = "You are a strict Czech A2 oral-exam examiner (permanent residence).\n"
+    . "Grade the learner answer. Feedback note must be in English and name the problem if any.\n"
+    . "Rules: one full sentence; must make sense for THIS question. "
+    . "Score 4–5 ONLY if on-topic AND a clear full sentence. "
+    . "Yes/no alone, off-topic, or fragments = max 2–3.\n\n"
+    . "Question: {$question}\n"
+    . "Learner answer: {$answer}\n\n"
+    . 'Return JSON: {"ok":true|false,"score":1-5,"note":"short English feedback","better":"model Czech sentence or null"}';
 
 $result = gemini_interactions_failover($GOOGLE_API_KEYS, [
     'model' => $LISTEN_MODEL,
-    'system_instruction' => 'You grade A2 Czech speaking answers. Output JSON only, no markdown.',
+    'system_instruction' => 'Strict A2 Czech speaking grader. Notes in English. JSON only.',
     'input' => $prompt,
     'generation_config' => [
         'thinking_level' => 'low',
