@@ -19,6 +19,16 @@ Speaking site `config.local.php`:
 'stt_api_key' => '…',
 ```
 
+## Firewall
+
+Port **8091** is restricted on Contabo to the Hostinger `numbertools.eu` server only:
+
+- Allow: `82.198.228.108` (speaking/vocabulary Hostinger box)
+- Drop: all other sources
+- Persist: `czech-stt-firewall.service` → `/usr/local/sbin/czech-stt-firewall.sh`
+
+API key is still required as a second layer.
+
 ## Models
 
 | Model | RAM (int8) | Quality |
