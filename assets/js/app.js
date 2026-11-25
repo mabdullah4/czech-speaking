@@ -13,6 +13,7 @@
   const qText = document.querySelector("#qText");
   const replayBtn = document.querySelector("#replayBtn");
   const recordBtn = document.querySelector("#recordBtn");
+  const skipBtn = document.querySelector("#skipBtn");
   const stopExamBtn = document.querySelector("#stopExamBtn");
   const nextBtn = document.querySelector("#nextBtn");
   const answerBox = document.querySelector("#answerBox");
@@ -28,6 +29,8 @@
   const topMeta = document.querySelector("#topMeta");
   const speechRate = document.querySelector("#speechRate");
   const speechRateExam = document.querySelector("#speechRateExam");
+  const voiceGender = document.querySelector("#voiceGender");
+  const voiceGenderExam = document.querySelector("#voiceGenderExam");
   const selectionSummary = document.querySelector("#selectionSummary");
   const clearTopicsBtn = document.querySelector("#clearTopicsBtn");
   const randomTwoBtn = document.querySelector("#randomTwoBtn");
@@ -35,6 +38,7 @@
   const rateStorageKey = "speaking-t1-speech-rate";
   const topicsStorageKey = "speaking-t1-selected-topics";
   const questionCountStorageKey = "speaking-t1-question-count";
+  const genderStorageKey = "speaking-t1-voice-gender";
 
   const questionCountSelect = document.querySelector("#questionCount");
 
@@ -52,6 +56,8 @@
   let recordPointerId = null;
   let recordStartedAt = 0;
   let playbackRate = 1;
+  /** @type {"male"|"female"} */
+  let askedGender = "male";
   let questionCount = 4;
   let selectingLocked = false;
   /** @type {Map<number, Promise<{audio:string,mime:string,url?:string|null}>>} */
@@ -73,6 +79,19 @@
           "'": "&#39;",
         })[char],
     );
+
+  /** Resolve bank slash forms (rád/a, nemocný/á, …) for display — mirrors PHP/Python. */
+  const resolveGenderForm = (text, gender) => {
+    let t = String(text || "").trim();
+    const special = { "vdaná/ženatý": { male: "ženatý", female: "vdaná" } };
+    for (const [pair, forms] of Object.entries(special)) {
+      t = t.split(pair).join(forms[gender] || forms.male);
+    }
+    t = t.split("ý/á").join(gender === "female" ? "á" : "ý");
+    t = t.replace(/\/a\b/g, gender === "female" ? "a" : "");
+    t = t.replace(/\//g, " nebo ");
+    return t.replace(/ {2,}/g, " ");
+  };
 
   const setStatus = (el, message, isError = false) => {
     el.textContent = message || "";
@@ -184,7 +203,7 @@
       const res = await fetch("api/speak.php", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text }),
+        body: JSON.stringify({ text, gender: askedGender }),
       });
       const data = await res.json().catch(() => ({}));
       if (res.ok) {
@@ -204,11 +223,14 @@
     throw new Error("TTS rate limit exceeded. Wait a minute and continue.");
   };
 
+  const audioCacheKey = (qi) => `${askedGender}:${qi}`;
+
   const ensureAudio = (qi) => {
     if (!session?.questions?.[qi]) {
       return Promise.reject(new Error("No question"));
     }
-    if (audioCache.has(qi)) return audioCache.get(qi);
+    const key = audioCacheKey(qi);
+    if (audioCache.has(key)) return audioCache.get(key);
     const text = session.questions[qi].question;
     const promise = fetchTts(text)
       .then((data) => {
@@ -218,13 +240,14 @@
           mime: data.mime || "audio/mpeg",
           url: data.url || null,
           source: data.source || null,
+          spoken: data.spoken || resolveGenderForm(text, askedGender),
         };
       })
       .catch((err) => {
-        audioCache.delete(qi);
+        audioCache.delete(key);
         throw err;
       });
-    audioCache.set(qi, promise);
+    audioCache.set(key, promise);
     return promise;
   };
 
@@ -264,6 +287,7 @@
   const setBusyUi = (on) => {
     replayBtn.disabled = on;
     recordBtn.disabled = on;
+    if (skipBtn) skipBtn.disabled = on;
     if (nextBtn) nextBtn.disabled = on;
   };
 
@@ -282,7 +306,7 @@
     const total = session.questions.length;
     qMeta.textContent = `Question ${index + 1} of ${total}`;
     qTopic.textContent = q.topic;
-    qText.textContent = q.question;
+    qText.textContent = resolveGenderForm(q.question, askedGender);
     qText.classList.toggle("hidden-q", !showQuestionText);
 
     topicChips.innerHTML = session.topics
@@ -304,7 +328,7 @@
       try {
         busy = true;
         setBusyUi(true);
-        if (!audioCache.has(index)) {
+        if (!audioCache.has(audioCacheKey(index))) {
           setStatus(examStatus, "Preparing examiner audio…");
         }
         await speakQuestionAt(index);
@@ -387,8 +411,6 @@
     await processAnswer(blob);
   };
 
-  const PASS_SCORE = 4;
-
   const showAttemptFeedback = (transcript, feedback) => {
     answerText.textContent = transcript || "(no speech detected)";
     answerBox.classList.remove("hidden");
@@ -444,14 +466,30 @@
     };
   };
 
-  const advanceAfterPass = async () => {
+  const enqueueGrade = (task) => {
+    const run = gradeQueue.then(task, task);
+    gradeQueue = run.then(
+      () => undefined,
+      () => undefined,
+    );
+    pendingGrades.push(run);
+    return run;
+  };
+
+  const advanceAfterAnswer = async () => {
     index += 1;
     updateProgress();
     if (index >= (session?.questions?.length || 0)) {
+      setStatus(examStatus, "Scoring your answers…");
+      busy = true;
+      setBusyUi(true);
+      await Promise.allSettled(pendingGrades);
+      busy = false;
+      setBusyUi(false);
       await finishSession();
       return;
     }
-    setStatus(examStatus, "Passed — next question…");
+    setStatus(examStatus, "Next question…");
     await renderQuestion({ autoSpeak: true });
   };
 
@@ -459,41 +497,43 @@
     const q = currentQuestion();
     if (!q) return;
 
-    busy = true;
-    setBusyUi(true);
-    setStatus(examStatus, "Transcribing (Whisper on VPS)…");
+    const slot = {
+      ...q,
+      answer: "(scoring…)",
+      feedback: { ok: false, score: 0, note: "Scoring in background…", better: null },
+      pending: true,
+    };
+    answers.push(slot);
 
-    try {
-      const { transcript, feedback } = await gradeAnswer(blob, q.question);
-      const score = Number(feedback?.score) || 0;
-      showAttemptFeedback(transcript, feedback);
-
-      if (score >= PASS_SCORE) {
-        answers.push({
-          ...q,
-          answer: transcript || "(no speech detected)",
-          feedback,
-          pending: false,
-        });
-        setStatus(
-          examStatus,
-          `Passed (${score}/5). Moving on…`,
-        );
-        await sleep(900);
-        await advanceAfterPass();
-      } else {
-        setStatus(
-          examStatus,
-          `Need ${PASS_SCORE}/5 to continue — try again.`,
-          true,
-        );
+    // Score in background — do not block the next question.
+    enqueueGrade(async () => {
+      try {
+        const { transcript, feedback } = await gradeAnswer(blob, q.question);
+        slot.answer = transcript || "(no speech detected)";
+        slot.feedback = feedback;
+        slot.pending = false;
+        // If user is still on a later question, briefly show last score in status.
+        if (examPanel && !examPanel.classList.contains("hidden")) {
+          const score = Number(feedback?.score) || 0;
+          const note = String(feedback?.note || "").slice(0, 80);
+          setStatus(
+            examStatus,
+            `Scored previous: ${score}/5${note ? ` · ${note}` : ""}`,
+          );
+        }
+      } catch (err) {
+        slot.answer = "(scoring failed)";
+        slot.feedback = {
+          ok: false,
+          score: 0,
+          note: err.message || "Scoring failed",
+          better: null,
+        };
+        slot.pending = false;
       }
-    } catch (err) {
-      setStatus(examStatus, err.message || "Scoring failed — try again.", true);
-    } finally {
-      busy = false;
-      setBusyUi(false);
-    }
+    });
+
+    await advanceAfterAnswer();
   };
 
   const clearAudioCache = () => {
@@ -503,30 +543,33 @@
 
   const finishSession = async () => {
     stopPlayback();
-    pendingGrades = [];
     clearAudioCache();
     showPanel("summary");
     pageTitle.textContent = "Summary";
-    topMeta.innerHTML = `Passed <strong>${answers.length}</strong> of <strong>${session?.questions?.length || 0}</strong>`;
+    const scored = answers.filter((a) => !a.pending && (Number(a.feedback?.score) || 0) > 0);
+    topMeta.innerHTML = `Answered <strong>${answers.length}</strong> · scored <strong>${scored.length}</strong>`;
     updateProgress();
 
     summaryList.innerHTML = answers.length
       ? answers
           .map(
             (item) => `<li>
-          <p class="summary-q">${escapeHtml(item.topic)} · ${escapeHtml(item.question)}</p>
+          <p class="summary-q">${escapeHtml(item.topic)} · ${escapeHtml(resolveGenderForm(item.question, askedGender))}</p>
           <p class="summary-a">${escapeHtml(item.answer || "—")}</p>
           ${
-            item.feedback?.score
-              ? `<p class="summary-note"><strong>${item.feedback.score}/5</strong> · ${escapeHtml(item.feedback.note || "")}</p>`
-              : item.feedback?.note
-                ? `<p class="summary-note">${escapeHtml(item.feedback.note)}</p>`
-                : ""
+            item.pending
+              ? `<p class="summary-note">Still scoring…</p>`
+              : item.feedback?.score
+                ? `<p class="summary-note"><strong>${item.feedback.score}/5</strong> · ${escapeHtml(item.feedback.note || "")}</p>`
+                : item.feedback?.note
+                  ? `<p class="summary-note">${escapeHtml(item.feedback.note)}</p>`
+                  : ""
           }
         </li>`,
           )
           .join("")
-      : "<li><p class=\"summary-note\">No passed answers yet.</p></li>";
+      : "<li><p class=\"summary-note\">No answers yet.</p></li>";
+    pendingGrades = [];
   };
 
   const syncQuestionCountUi = () => {
@@ -592,6 +635,24 @@
     }
   };
 
+  const syncGenderSelects = (value, { replay = false } = {}) => {
+    askedGender = value === "female" ? "female" : "male";
+    if (voiceGender) voiceGender.value = askedGender;
+    if (voiceGenderExam) voiceGenderExam.value = askedGender;
+    localStorage.setItem(genderStorageKey, askedGender);
+    clearAudioCache();
+    const q = currentQuestion();
+    if (q) {
+      qText.textContent = resolveGenderForm(q.question, askedGender);
+    }
+    if (replay && session && !examPanel.classList.contains("hidden") && !busy) {
+      prefetchRestAudio();
+      speakQuestionAt(index).catch((err) =>
+        setStatus(examStatus, err.message, true),
+      );
+    }
+  };
+
   const loadTopics = async () => {
     try {
       const data = await apiJson("api/topics.php");
@@ -653,6 +714,12 @@
   speechRateExam.addEventListener("change", () =>
     syncRateSelects(speechRateExam.value),
   );
+  voiceGender?.addEventListener("change", () =>
+    syncGenderSelects(voiceGender.value),
+  );
+  voiceGenderExam?.addEventListener("change", () =>
+    syncGenderSelects(voiceGenderExam.value, { replay: true }),
+  );
   questionCountSelect?.addEventListener("change", () =>
     setQuestionCount(questionCountSelect.value),
   );
@@ -662,6 +729,8 @@
   const savedCount = localStorage.getItem(questionCountStorageKey);
   if (savedCount) setQuestionCount(savedCount);
   else syncQuestionCountUi();
+  const savedGender = localStorage.getItem(genderStorageKey);
+  syncGenderSelects(savedGender === "female" ? "female" : "male");
 
   startBtn.addEventListener("click", startSession);
   againBtn.addEventListener("click", startSession);
@@ -727,17 +796,35 @@
     if (mediaRecorder) stopRecording();
   });
 
-  nextBtn?.addEventListener("click", () => {
+  skipBtn?.addEventListener("click", async () => {
     if (busy) return;
-    setStatus(
-      examStatus,
-      `You need ${PASS_SCORE}/5 before the next question.`,
-      true,
-    );
+    const q = currentQuestion();
+    if (q) {
+      answers.push({
+        ...q,
+        answer: "(skipped)",
+        feedback: { ok: false, score: 0, note: "Skipped", better: null },
+        pending: false,
+      });
+    }
+    setStatus(examStatus, "Skipped — next question…");
+    await advanceAfterAnswer();
   });
 
-  stopExamBtn.addEventListener("click", () => {
-    if (session) finishSession();
+  nextBtn?.addEventListener("click", () => {
+    if (busy) return;
+    setStatus(examStatus, "Answer or press Skip to continue.");
+  });
+
+  stopExamBtn.addEventListener("click", async () => {
+    if (!session) return;
+    setStatus(examStatus, "Scoring your answers…");
+    busy = true;
+    setBusyUi(true);
+    await Promise.allSettled(pendingGrades);
+    busy = false;
+    setBusyUi(false);
+    await finishSession();
   });
 
   loadTopics();

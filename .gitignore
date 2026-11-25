@@ -4,5 +4,6 @@ tools/piper/piper/
 tools/piper/piper_linux_x86_64.tar.gz
 tools/piper/voices/
 tools/piper/unique-texts.json
+.venv-tts/
 __pycache__/
 *.pyc

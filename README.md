@@ -35,15 +35,25 @@ Optional: **Show question text** if you want to read as well as listen.
 
 ## Examiner audio
 
-All 289 questions are stored as MP3 under `assets/audio/questions/`  
-(Microsoft Edge TTS **cs-CZ-VlastaNeural** — clear Czech female voice).  
+Questions are stored as MP3 under `assets/audio/questions/{male,female}/`.  
+The examiner is always a **woman** (Edge TTS **cs-CZ-VlastaNeural**).  
+Folders only change grammar addressed to the candidate — slash forms like
+`rád/a` become *rád* or *ráda* (not “rád nebo a”).
+
+| Folder    | Candidate form | Default on page |
+|-----------|----------------|-----------------|
+| `male/`   | rád, dělal, nemocný… | yes |
+| `female/` | ráda, dělala, nemocná… | |
+
 `api/speak.php` serves those first; Gemini TTS is only a fallback.
 
 To regenerate after editing questions:
 
 ```bash
-# default: Edge TTS Vlasta (needs edge-tts). Alt: --engine piper (Kasandra)
-python3 tools/generate-question-audio.py --force
+# both candidate forms, Vlasta voice (needs edge-tts)
+.venv-tts/bin/python tools/generate-question-audio.py --force
+# preview slash resolutions only:
+.venv-tts/bin/python tools/generate-question-audio.py --dry-run
 ```
 
 ## Source

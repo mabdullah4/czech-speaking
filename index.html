@@ -89,6 +89,13 @@
                   <option value="2">2× fastest</option>
                 </select>
               </label>
+              <label class="setup-field" for="voiceGender">
+                <span class="field-label">I answer as</span>
+                <select id="voiceGender" aria-label="Candidate gender for question forms">
+                  <option value="male" selected>Male (rád, dělal…)</option>
+                  <option value="female">Female (ráda, dělala…)</option>
+                </select>
+              </label>
               <div class="setup-field">
                 <span class="field-label">Selection</span>
                 <strong class="setup-value" id="selectionSummary">Random 2 topics</strong>
@@ -98,7 +105,7 @@
               <h2>Pravidla jako u zkoušky</h2>
               <ul>
                 <li>Odpovězte <strong>jednou celou větou</strong> — ne jedním slovem, ale ani dlouho.</li>
-                <li>You need at least <strong>4/5</strong> to unlock the next question.</li>
+                <li>Answer, then the next question starts right away — scoring runs in the background. Use <strong>Skip</strong> anytime.</li>
                 <li>Témata uvidíte předem; otázky nejdřív jen uslyšíte.</li>
                 <li>Mluvte spontánně — nečtěte napsaný text.</li>
               </ul>
@@ -122,6 +129,7 @@
               <div class="controls">
                 <button type="button" class="btn btn-secondary" id="replayBtn">Replay question</button>
                 <button type="button" class="btn btn-record" id="recordBtn">Press to answer</button>
+                <button type="button" class="btn btn-secondary" id="skipBtn">Skip</button>
                 <button type="button" class="btn btn-danger btn-secondary" id="stopExamBtn">End</button>
                 <label class="inline-rate" for="speechRateExam">
                   <span class="field-label">Speed</span>
@@ -132,6 +140,13 @@
                     <option value="1.5">1.5×</option>
                     <option value="1.75">1.75×</option>
                     <option value="2">2×</option>
+                  </select>
+                </label>
+                <label class="inline-rate" for="voiceGenderExam">
+                  <span class="field-label">I answer as</span>
+                  <select id="voiceGenderExam" aria-label="Candidate gender for question forms">
+                    <option value="male" selected>Male</option>
+                    <option value="female">Female</option>
                   </select>
                 </label>
               </div>
@@ -159,6 +174,6 @@
       </main>
     </div>
 
-    <script src="assets/js/app.js?v=20261124d"></script>
+    <script src="assets/js/app.js?v=20261125b"></script>
   </body>
 </html>
