@@ -14,7 +14,7 @@ from faster_whisper import WhisperModel
 from pydantic import BaseModel, Field
 
 API_KEY = os.environ.get("STT_API_KEY", "").strip()
-MODEL_NAME = os.environ.get("WHISPER_MODEL", "base")
+MODEL_NAME = os.environ.get("WHISPER_MODEL", "small")
 DEVICE = os.environ.get("WHISPER_DEVICE", "cpu")
 COMPUTE = os.environ.get("WHISPER_COMPUTE", "int8")
 CPU_THREADS = int(os.environ.get("WHISPER_THREADS", "4"))
@@ -266,20 +266,246 @@ def grade_a2(question: str, heard: str) -> dict:
     }
 
 
-def transcribe_file(path: Path) -> str:
+QUESTION_WORD = re.compile(
+    r"\b(kolik|kde|kdy|kdo|proč|jak|jaký|jaká|jaké|jakou|jací|co|který|která|které|"
+    r"v\s+kolik|od\s+kdy|do\s+kdy|jak\s+dlouho|jak\s+často)\b",
+    re.I,
+)
+
+# Verb-first yes/no questions with formal vy (or 1st person můžu)
+ASK_VERB_START = re.compile(
+    r"^(dobrý\s+den[,.]?\s+)?("
+    r"máte|můžete|můžu|mohu|je\b|jsou\b|bude|budete|"
+    r"dáte|dá|funguje|existuje|prodáváte|opravujete|"
+    r"přijímáte|objednáte|rezervujete|otevíráte|zavíráte"
+    r")\b",
+    re.I,
+)
+
+INFORMAL_TY = re.compile(
+    r"\b(máš|můžeš|mohouš|jsi|bys|chceš|víš|řekneš|dáš|umíš|znáš)\b",
+    re.I,
+)
+
+HINT_KEYWORD_MAP = {
+    "kč": ["kolik", "stojí", "cena", "stát", "korun", "platit", "nájem", "zaplat"],
+    "cena": ["kolik", "stojí", "cena", "stát", "korun"],
+    "volný": ["volný", "volná", "volné", "máte", "volno"],
+    "pokoj": ["pokoj", "ubytování", "noc", "noci"],
+    "hodina": ["hodin", "v kolik", "kdy", "od", "do", "čas"],
+    "snídan": ["snídan"],
+    "oprav": ["oprav", "opravit", "servis", "rozbit"],
+    "dob": ["jak dlouho", "trvá", "trvat", "doba", "týden", "dn"],
+    "velikost": ["velikost", "velikosti", "číslo", "máte"],
+    "materiál": ["materiál", "kožen", "látk", "z čeho"],
+    "pes": ["pes", "psa", "zvíře", "zvířata", "domácí"],
+    "stěhov": ["nastěhovat", "stěhovat", "volný", "od kdy", "kdy"],
+    "datum": ["kdy", "datum", "od", "termín"],
+    "lék": ["lék", "tablety", "bolest", "máte"],
+    "brát": ["brát", "užívat", "jak často", "kolikrát", "denně"],
+    "poslat": ["poslat", "zásilka", "balík", "do"],
+    "trvá": ["jak dlouho", "trvá", "trvat", "dní", "dnů"],
+    "jízden": ["jízden", "lístek", "vlak", "máte"],
+    "stůl": ["stůl", "stolek", "rezerv", "volný", "míst"],
+    "menu": ["menu", "jídelní", "vegetarián", "jídlo"],
+    "termín": ["termín", "objednat", "kdy", "volný"],
+    "pojišt": ["pojišt", "kartičk"],
+    "střih": ["střih", "ostříhat", "vlasy", "termín"],
+    "registr": ["registr", "zaregistrovat", "členství", "průkaz"],
+    "půjč": ["půjč", "vypůjč", "jak dlouho", "měsíc"],
+    "líst": ["líst", "vstupenk", "máte", "míst"],
+}
+
+
+def looks_like_question(text: str) -> bool:
+    t = fold(text).rstrip()
+    if t.endswith("?"):
+        return True
+    if QUESTION_WORD.search(t):
+        return True
+    if ASK_VERB_START.search(t):
+        return True
+    return False
+
+
+def hint_matches(hint: str, heard: str, model_question: str = "") -> bool:
+    """Loose match: hint keywords or model-question content overlap."""
+    h = fold(hint)
+    a = fold(heard)
+    if not h or "vaše otázka" in h or h.startswith("…"):
+        return True
+
+    # Direct keyword map from hint fragments
+    for key, words in HINT_KEYWORD_MAP.items():
+        if key in h:
+            if any(w in a for w in words):
+                return True
+
+    # Content overlap with hint tokens
+    hint_toks = content_tokens(hint)
+    heard_toks = content_tokens(heard)
+    if hint_toks and (hint_toks & heard_toks):
+        return True
+
+    # Overlap with model question content
+    if model_question:
+        mq = content_tokens(model_question)
+        if mq and len(mq & heard_toks) >= 1:
+            return True
+        # Shared question-word type
+        if QUESTION_WORD.search(fold(model_question)) and QUESTION_WORD.search(a):
+            mq_type = question_type(model_question)
+            heard_type = question_type(heard if looks_like_question(heard) else model_question)
+            if mq_type == heard_type and mq_type != "general":
+                return True
+
+    # Price hints often just "Kč?"
+    if "kč" in h or "cena" in h:
+        if re.search(r"\b(kolik|stojí|cena|korun|platit)\b", a):
+            return True
+
+    return False
+
+
+def situation_relevant(situation: str, heard: str) -> bool:
+    s_toks = content_tokens(situation)
+    a_toks = content_tokens(heard)
+    if not a_toks:
+        return False
+    if s_toks & a_toks:
+        return True
+    # Any clear question in a service dialogue is usually OK for free Q
+    return looks_like_question(heard) and len(tokens(heard)) >= 3
+
+
+def grade_ask(
+    situation: str,
+    hint: str,
+    heard: str,
+    model_question: str = "",
+    is_free: bool = False,
+) -> dict:
+    text = (heard or "").strip()
+    better = model_question.strip() or None
+
+    if not text:
+        return {
+            "ok": False,
+            "score": 1,
+            "note": "No clear speech detected — ask one clear Czech question.",
+            "better": better,
+        }
+
+    words = tokens(text)
+    n = len(words)
+
+    if INFORMAL_TY.search(text):
+        return {
+            "ok": False,
+            "score": 2,
+            "note": "Use formal vy (máte/můžete), not informal ty (máš/můžeš).",
+            "better": better,
+        }
+
+    if n <= 2:
+        return {
+            "ok": False,
+            "score": 2,
+            "note": "Too short — ask a full question (e.g. Kolik to stojí?).",
+            "better": better,
+        }
+
+    if not looks_like_question(text):
+        return {
+            "ok": False,
+            "score": 2,
+            "note": "Not a question — use a question word (kolik, kde, kdy…) or verb-first form (Máte…?).",
+            "better": better,
+        }
+
+    if is_free:
+        relevant = situation_relevant(situation, text)
+        if not relevant:
+            return {
+                "ok": False,
+                "score": 2,
+                "note": "Your free question should relate to this situation.",
+                "better": better,
+            }
+    else:
+        relevant = hint_matches(hint, text, model_question)
+        if not relevant:
+            return {
+                "ok": False,
+                "score": 2,
+                "note": f"Off-topic for the hint ({hint or 'info'}) — ask for that information.",
+                "better": better,
+            }
+
+    if n >= 5:
+        return {
+            "ok": True,
+            "score": 5,
+            "note": "Clear formal question that fits the prompt.",
+            "better": better if fold(text) != fold(model_question or "") else None,
+        }
+
+    if n >= 3:
+        return {
+            "ok": True,
+            "score": 4,
+            "note": "Good question. A slightly fuller form would earn a 5.",
+            "better": better,
+        }
+
+    return {
+        "ok": True,
+        "score": 3,
+        "note": "Partly OK — make the question clearer and fully formal.",
+        "better": better,
+    }
+
+
+def transcribe_file(path: Path, question: str = "", *, as_question: bool = False) -> str:
     assert model is not None
+    if as_question:
+        prompt = (
+            "Česká mluvená otázka u zkoušky A2. "
+            + (f"Vzor: {question.strip()} " if question.strip() else "")
+            + "Uchazeč se ptá formálně (vy). Otázka celou větou."
+        )
+    else:
+        # Bias decoder toward Czech A2 vocabulary from the exam question.
+        prompt = (
+            "Česká mluvená odpověď na otázku A2. "
+            + (f"Otázka: {question.strip()} " if question.strip() else "")
+            + "Odpověď celou větou."
+        )
     segments, _info = model.transcribe(
         str(path),
         language="cs",
-        beam_size=1,
-        best_of=1,
+        task="transcribe",
+        beam_size=5,
+        best_of=5,
+        temperature=0.0,
         vad_filter=True,
-        vad_parameters=dict(min_silence_duration_ms=300),
+        vad_parameters=dict(min_silence_duration_ms=250),
         condition_on_previous_text=False,
         without_timestamps=True,
+        initial_prompt=prompt[:224],
     )
     parts = [seg.text.strip() for seg in segments if seg.text and seg.text.strip()]
     return " ".join(parts).strip()
+
+
+async def _read_audio_tmp(audio: UploadFile) -> Path:
+    suffix = Path(audio.filename or "clip.webm").suffix or ".webm"
+    raw = await audio.read()
+    if len(raw) < 200:
+        raise HTTPException(status_code=400, detail="Audio too short")
+    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
+        tmp.write(raw)
+        return Path(tmp.name)
 
 
 @app.get("/health")
@@ -298,19 +524,31 @@ async def answer(
     question: str = Form(...),
     audio: UploadFile = File(...),
 ) -> GradeOut:
-    suffix = Path(audio.filename or "clip.webm").suffix or ".webm"
-    raw = await audio.read()
-    if len(raw) < 200:
-        raise HTTPException(status_code=400, detail="Audio too short")
-
-    with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as tmp:
-        tmp.write(raw)
-        tmp_path = Path(tmp.name)
-
+    tmp_path = await _read_audio_tmp(audio)
     try:
-        heard = transcribe_file(tmp_path)
+        heard = transcribe_file(tmp_path, question)
     finally:
         tmp_path.unlink(missing_ok=True)
 
     graded = grade_a2(question, heard)
+    return GradeOut(heard=heard, **graded)
+
+
+@app.post("/v1/ask", response_model=GradeOut, dependencies=[Depends(require_key)])
+async def ask(
+    situation: str = Form(...),
+    audio: UploadFile = File(...),
+    hint: str = Form(""),
+    model_question: str = Form(""),
+    is_free: str = Form("0"),
+) -> GradeOut:
+    free = is_free.strip() in {"1", "true", "True", "yes"}
+    tmp_path = await _read_audio_tmp(audio)
+    try:
+        bias = model_question or hint or situation
+        heard = transcribe_file(tmp_path, bias, as_question=True)
+    finally:
+        tmp_path.unlink(missing_ok=True)
+
+    graded = grade_ask(situation, hint, heard, model_question, free)
     return GradeOut(heard=heard, **graded)

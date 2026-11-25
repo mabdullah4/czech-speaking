@@ -1,16 +1,24 @@
 (() => {
   const topicList = document.querySelector("#topicList");
-  const homePanel = document.querySelector("#homePanel");
+  const homePanelT1 = document.querySelector("#homePanelT1");
+  const homePanelT2 = document.querySelector("#homePanelT2");
   const examPanel = document.querySelector("#examPanel");
   const summaryPanel = document.querySelector("#summaryPanel");
-  const startBtn = document.querySelector("#startBtn");
+  const startBtnT1 = document.querySelector("#startBtnT1");
+  const startBtnT2 = document.querySelector("#startBtnT2");
   const showQuestionsToggle = document.querySelector("#showQuestionsToggle");
-  const homeStatus = document.querySelector("#homeStatus");
+  const homeStatusT1 = document.querySelector("#homeStatusT1");
+  const homeStatusT2 = document.querySelector("#homeStatusT2");
   const examStatus = document.querySelector("#examStatus");
   const topicChips = document.querySelector("#topicChips");
+  const scenarioCard = document.querySelector("#scenarioCard");
+  const scenarioSituation = document.querySelector("#scenarioSituation");
+  const scenarioHints = document.querySelector("#scenarioHints");
   const qMeta = document.querySelector("#qMeta");
   const qTopic = document.querySelector("#qTopic");
+  const qPrompt = document.querySelector("#qPrompt");
   const qText = document.querySelector("#qText");
+  const answerLabel = document.querySelector("#answerLabel");
   const replayBtn = document.querySelector("#replayBtn");
   const recordBtn = document.querySelector("#recordBtn");
   const skipBtn = document.querySelector("#skipBtn");
@@ -27,23 +35,35 @@
   const progressFill = document.querySelector("#progressFill");
   const pageTitle = document.querySelector("#pageTitle");
   const topMeta = document.querySelector("#topMeta");
+  const crumb = document.querySelector("#crumb");
+  const sidebarNavLabel = document.querySelector("#sidebarNavLabel");
+  const sidebarFoot = document.querySelector("#sidebarFoot");
   const speechRate = document.querySelector("#speechRate");
+  const speechRateT2 = document.querySelector("#speechRateT2");
   const speechRateExam = document.querySelector("#speechRateExam");
   const voiceGender = document.querySelector("#voiceGender");
   const voiceGenderExam = document.querySelector("#voiceGenderExam");
+  const voiceGenderExamWrap = document.querySelector("#voiceGenderExamWrap");
   const selectionSummary = document.querySelector("#selectionSummary");
+  const selectionSummaryT2 = document.querySelector("#selectionSummaryT2");
   const clearTopicsBtn = document.querySelector("#clearTopicsBtn");
   const randomTwoBtn = document.querySelector("#randomTwoBtn");
+  const questionCountSelect = document.querySelector("#questionCount");
+  const taskTabs = document.querySelectorAll(".task-tab");
 
   const rateStorageKey = "speaking-t1-speech-rate";
   const topicsStorageKey = "speaking-t1-selected-topics";
+  const dialoguesStorageKey = "speaking-t2-selected-dialogues";
   const questionCountStorageKey = "speaking-t1-question-count";
   const genderStorageKey = "speaking-t1-voice-gender";
+  const taskStorageKey = "speaking-active-task";
 
-  const questionCountSelect = document.querySelector("#questionCount");
-
+  /** @type {1|2} */
+  let activeTask = 1;
   let topicsCatalog = [];
+  let dialoguesCatalog = [];
   let selectedTopicIds = new Set();
+  let selectedDialogueIds = new Set();
   let showQuestionText = false;
   let session = null;
   let index = 0;
@@ -60,12 +80,14 @@
   let askedGender = "male";
   let questionCount = 4;
   let selectingLocked = false;
-  /** @type {Map<number, Promise<{audio:string,mime:string,url?:string|null}>>} */
+  /** @type {Map<string, Promise<{audio:string,mime:string,url?:string|null,spoken?:string}>>} */
   let audioCache = new Map();
   let prefetchReady = 0;
   /** @type {Promise<void>[]} */
   let pendingGrades = [];
   let gradeQueue = Promise.resolve();
+  /** Last examiner line spoken (for Replay on T2 opening/reply). */
+  let lastSpokenText = "";
 
   const escapeHtml = (value) =>
     String(value).replace(
@@ -93,21 +115,45 @@
     return t.replace(/ {2,}/g, " ");
   };
 
+  const homeStatus = () => (activeTask === 2 ? homeStatusT2 : homeStatusT1);
+
   const setStatus = (el, message, isError = false) => {
+    if (!el) return;
     el.textContent = message || "";
     el.classList.toggle("error", Boolean(isError));
   };
 
   const showPanel = (panel) => {
-    homePanel.classList.toggle("hidden", panel !== "home");
+    const onHome = panel === "home";
+    homePanelT1.classList.toggle("hidden", !(onHome && activeTask === 1));
+    homePanelT2.classList.toggle("hidden", !(onHome && activeTask === 2));
     examPanel.classList.toggle("hidden", panel !== "exam");
     summaryPanel.classList.toggle("hidden", panel !== "summary");
     selectingLocked = panel === "exam";
-    renderTopics();
+    renderSidebarList();
+  };
+
+  const askTurns = () =>
+    (session?.turns || []).filter((t) => t.kind === "ask");
+
+  const currentTurn = () => session?.turns?.[index] || null;
+
+  const currentQuestion = () => {
+    if (activeTask === 2) return null;
+    return session?.questions?.[index] || null;
   };
 
   const updateProgress = () => {
-    const total = session?.questions?.length || 8;
+    if (activeTask === 2) {
+      const asks = askTurns();
+      const doneAsks = answers.length;
+      const total = session?.totalAsks || asks.length || 8;
+      progressCount.textContent = String(Math.min(doneAsks, total));
+      progressLabel.textContent = `/ ${total}`;
+      progressFill.style.transform = `scaleX(${total ? doneAsks / total : 0})`;
+      return;
+    }
+    const total = session?.questions?.length || questionCount;
     const done = Math.min(index, total);
     progressCount.textContent = String(done);
     progressLabel.textContent = `/ ${total}`;
@@ -121,7 +167,25 @@
     );
   };
 
+  const persistDialogues = () => {
+    localStorage.setItem(
+      dialoguesStorageKey,
+      JSON.stringify([...selectedDialogueIds]),
+    );
+  };
+
   const updateSelectionSummary = () => {
+    if (activeTask === 2) {
+      if (!selectedDialogueIds.size) {
+        selectionSummaryT2.textContent = "Random 2 dialogues";
+        return;
+      }
+      const names = dialoguesCatalog
+        .filter((d) => selectedDialogueIds.has(d.id))
+        .map((d) => d.title);
+      selectionSummaryT2.textContent = `${names.length} selected · ${names.join(", ")}`;
+      return;
+    }
     if (!selectedTopicIds.size) {
       selectionSummary.textContent = "Random 2 topics";
       return;
@@ -132,7 +196,27 @@
     selectionSummary.textContent = `${names.length} selected · ${names.join(", ")}`;
   };
 
-  const renderTopics = (highlightIds = null) => {
+  const renderSidebarList = (highlightIds = null) => {
+    if (activeTask === 2) {
+      const active = highlightIds
+        ? new Set(highlightIds)
+        : selectingLocked && session
+          ? new Set((session.dialogues || []).map((d) => d.id))
+          : selectedDialogueIds;
+
+      topicList.innerHTML = dialoguesCatalog
+        .map((d) => {
+          const picked = active.has(d.id);
+          return `<button type="button" class="topic-button${picked ? " picked" : ""}" data-id="${escapeHtml(d.id)}" ${selectingLocked ? "disabled" : ""}>
+            <span>${escapeHtml(d.title)}</span>
+            <span class="topic-count">4 Q</span>
+          </button>`;
+        })
+        .join("");
+      updateSelectionSummary();
+      return;
+    }
+
     const active = highlightIds
       ? new Set(highlightIds)
       : selectingLocked && session
@@ -149,6 +233,51 @@
       })
       .join("");
     updateSelectionSummary();
+  };
+
+  const applyTaskChrome = () => {
+    taskTabs.forEach((tab) => {
+      const on = Number(tab.dataset.task) === activeTask;
+      tab.classList.toggle("active", on);
+      tab.setAttribute("aria-selected", on ? "true" : "false");
+    });
+    if (activeTask === 2) {
+      crumb.innerHTML = `Study desk <span aria-hidden="true">/</span> Speaking T2`;
+      sidebarNavLabel.textContent = "Pick situations · or leave empty for random 2";
+      sidebarFoot.innerHTML = "A2 · TRVALÝ POBYT<br />MLUVENÍ · ÚLOHA 2";
+      pageTitle.textContent = "Dialogy";
+      document.title = "Čeština | A2 Speaking · Úloha 2";
+      voiceGenderExamWrap?.classList.add("hidden");
+      progressLabel.textContent = "/ 8";
+      topMeta.innerHTML = `Practice <strong>2 dialogues · 8 questions</strong>`;
+    } else {
+      crumb.innerHTML = `Study desk <span aria-hidden="true">/</span> Speaking T1`;
+      sidebarNavLabel.textContent = "Pick topics · or leave empty for random 2";
+      sidebarFoot.innerHTML = "A2 · TRVALÝ POBYT<br />MLUVENÍ · ÚLOHA 1";
+      pageTitle.textContent = "Otázky";
+      document.title = "Čeština | A2 Speaking · Úloha 1";
+      voiceGenderExamWrap?.classList.remove("hidden");
+      syncQuestionCountUi();
+    }
+  };
+
+  const setActiveTask = (task, { resetHome = true } = {}) => {
+    if (selectingLocked) return;
+    activeTask = task === 2 ? 2 : 1;
+    localStorage.setItem(taskStorageKey, String(activeTask));
+    applyTaskChrome();
+    if (resetHome) {
+      showPanel("home");
+      setStatus(homeStatusT1, "");
+      setStatus(homeStatusT2, "");
+    }
+    renderSidebarList();
+    if (activeTask === 1) {
+      const totalQs = topicsCatalog.reduce((sum, t) => sum + t.count, 0);
+      topMeta.innerHTML = `Bank <strong>${totalQs} questions · ${topicsCatalog.length} topics</strong> · session <strong>${questionCount}</strong>`;
+    } else {
+      topMeta.innerHTML = `Bank <strong>${dialoguesCatalog.length} situations</strong> · session <strong>2 dialogues</strong>`;
+    }
   };
 
   const stopPlayback = () => {
@@ -211,10 +340,7 @@
       }
       const retryAfter = Number(data.retry_after) || 22;
       if (res.status === 429 || /rate/i.test(String(data.error || ""))) {
-        setStatus(
-          examStatus,
-          `TTS limit — waiting ${retryAfter}s…`,
-        );
+        setStatus(examStatus, `TTS limit — waiting ${retryAfter}s…`);
         await sleep(retryAfter * 1000);
         continue;
       }
@@ -223,15 +349,12 @@
     throw new Error("TTS rate limit exceeded. Wait a minute and continue.");
   };
 
-  const audioCacheKey = (qi) => `${askedGender}:${qi}`;
+  const audioCacheKey = (key) =>
+    activeTask === 2 ? `t2:${key}` : `${askedGender}:${key}`;
 
-  const ensureAudio = (qi) => {
-    if (!session?.questions?.[qi]) {
-      return Promise.reject(new Error("No question"));
-    }
-    const key = audioCacheKey(qi);
+  const ensureAudioText = (cacheKey, text) => {
+    const key = audioCacheKey(cacheKey);
     if (audioCache.has(key)) return audioCache.get(key);
-    const text = session.questions[qi].question;
     const promise = fetchTts(text)
       .then((data) => {
         prefetchReady += 1;
@@ -240,7 +363,7 @@
           mime: data.mime || "audio/mpeg",
           url: data.url || null,
           source: data.source || null,
-          spoken: data.spoken || resolveGenderForm(text, askedGender),
+          spoken: data.spoken || text,
         };
       })
       .catch((err) => {
@@ -251,24 +374,66 @@
     return promise;
   };
 
-  /** Prefetch remaining question audio in the background (static files are instant). */
+  const ensureAudio = (qi) => {
+    if (!session?.questions?.[qi]) {
+      return Promise.reject(new Error("No question"));
+    }
+    const text = session.questions[qi].question;
+    return ensureAudioText(String(qi), text).then((data) => ({
+      ...data,
+      spoken: data.spoken || resolveGenderForm(text, askedGender),
+    }));
+  };
+
   const prefetchRestAudio = () => {
+    if (activeTask === 2) {
+      if (!session?.turns?.length) return;
+      const chain = async () => {
+        for (let i = 0; i < session.turns.length; i += 1) {
+          const t = session.turns[i];
+          try {
+            if (t.kind === "opening" || t.kind === "closing") {
+              await ensureAudioText(`turn-${i}`, t.text);
+            } else if (t.kind === "ask" && t.reply) {
+              await ensureAudioText(`reply-${i}`, t.reply);
+            }
+          } catch {
+            // retry on demand
+          }
+        }
+      };
+      return chain();
+    }
     if (!session?.questions?.length) return;
     const chain = async () => {
       for (let qi = 0; qi < session.questions.length; qi += 1) {
         try {
           await ensureAudio(qi);
         } catch {
-          // retry on demand when that question is shown
+          // retry on demand
         }
       }
     };
     return chain();
   };
 
+  const playSpoken = async (cacheKey, text) => {
+    lastSpokenText = text;
+    setStatus(examStatus, "Examiner is speaking…");
+    const data = await ensureAudioText(cacheKey, text);
+    if (data.url) {
+      await playAudioUrl(data.url);
+    } else if (data.audio) {
+      await playBase64Audio(data.audio, data.mime);
+    } else {
+      throw new Error("No audio");
+    }
+  };
+
   const speakQuestionAt = async (qi) => {
     setStatus(examStatus, "Examiner is speaking…");
     const data = await ensureAudio(qi);
+    lastSpokenText = data.spoken || session.questions[qi].question;
     if (data.url) {
       await playAudioUrl(data.url);
     } else if (data.audio) {
@@ -282,13 +447,27 @@
     );
   };
 
-  const currentQuestion = () => session?.questions?.[index] || null;
-
   const setBusyUi = (on) => {
     replayBtn.disabled = on;
     recordBtn.disabled = on;
     if (skipBtn) skipBtn.disabled = on;
     if (nextBtn) nextBtn.disabled = on;
+  };
+
+  const renderScenarioCard = (turn) => {
+    if (!turn || activeTask !== 2) {
+      scenarioCard.classList.add("hidden");
+      return;
+    }
+    scenarioCard.classList.remove("hidden");
+    scenarioSituation.textContent = turn.situation || "—";
+    const hints = turn.hints || [];
+    scenarioHints.innerHTML = hints
+      .map((h, i) => {
+        const active = turn.hintIndex === i;
+        return `<li class="${active ? "active" : ""}">${escapeHtml(h)}</li>`;
+      })
+      .join("");
   };
 
   const renderQuestion = async ({ autoSpeak = true } = {}) => {
@@ -298,10 +477,14 @@
       return;
     }
 
+    scenarioCard.classList.add("hidden");
     answerBox.classList.add("hidden");
     feedbackBox.classList.add("hidden");
     answerText.textContent = "";
     feedbackBox.innerHTML = "";
+    answerLabel.textContent = "Vaše odpověď";
+    qPrompt.textContent = "Poslouchejte otázku a odpovězte celou větou.";
+    recordBtn.textContent = "Press to answer";
 
     const total = session.questions.length;
     qMeta.textContent = `Question ${index + 1} of ${total}`;
@@ -319,16 +502,15 @@
     pageTitle.textContent = q.topic;
     topMeta.innerHTML = `Speaking <strong>${escapeHtml(q.topic)}</strong>`;
     updateProgress();
-    renderTopics(session.topics.map((t) => t.id));
+    renderSidebarList(session.topics.map((t) => t.id));
 
-    // Warm only the next question — free tier can't handle parallel bursts.
     ensureAudio(index + 1).catch(() => {});
 
     if (autoSpeak) {
       try {
         busy = true;
         setBusyUi(true);
-        if (!audioCache.has(audioCacheKey(index))) {
+        if (!audioCache.has(audioCacheKey(String(index)))) {
           setStatus(examStatus, "Preparing examiner audio…");
         }
         await speakQuestionAt(index);
@@ -338,6 +520,132 @@
         busy = false;
         setBusyUi(false);
       }
+    }
+  };
+
+  const renderT2Turn = async ({ autoSpeak = true } = {}) => {
+    const turn = currentTurn();
+    if (!turn) {
+      finishSession();
+      return;
+    }
+
+    answerBox.classList.add("hidden");
+    feedbackBox.classList.add("hidden");
+    answerText.textContent = "";
+    feedbackBox.innerHTML = "";
+    answerLabel.textContent = "Vaše otázka";
+    renderScenarioCard(turn);
+
+    topicChips.innerHTML = (session.dialogues || [])
+      .map(
+        (d) =>
+          `<span class="topic-chip${d.id === turn.dialogueId ? " active" : ""}">${escapeHtml(d.title)}</span>`,
+      )
+      .join("");
+
+    pageTitle.textContent = turn.dialogueTitle || "Dialog";
+    topMeta.innerHTML = `Dialogue <strong>${(turn.dialogueIndex || 0) + 1}/${(session.dialogues || []).length}</strong>`;
+    updateProgress();
+    renderSidebarList((session.dialogues || []).map((d) => d.id));
+
+    if (turn.kind === "opening") {
+      qMeta.textContent = `Dialog ${(turn.dialogueIndex || 0) + 1} · opening`;
+      qTopic.textContent = turn.dialogueTitle;
+      qPrompt.textContent = "Poslouchejte tazatele — pak se ptejte podle karty.";
+      qText.textContent = turn.text;
+      qText.classList.remove("hidden-q");
+      recordBtn.classList.add("hidden");
+      skipBtn?.classList.add("hidden");
+      replayBtn.textContent = "Replay greeting";
+
+      if (autoSpeak) {
+        try {
+          busy = true;
+          setBusyUi(true);
+          await playSpoken(`turn-${index}`, turn.text);
+          setStatus(examStatus, "Your turn — ask the first question from the card.");
+          // Auto-advance to first ask after greeting
+          index += 1;
+          await renderT2Turn({ autoSpeak: false });
+          setStatus(
+            examStatus,
+            "Press the button and ask your question (formal vy).",
+          );
+        } catch (err) {
+          setStatus(examStatus, err.message, true);
+        } finally {
+          busy = false;
+          setBusyUi(false);
+        }
+      }
+      return;
+    }
+
+    if (turn.kind === "closing") {
+      qMeta.textContent = `Dialog ${(turn.dialogueIndex || 0) + 1} · closing`;
+      qTopic.textContent = turn.dialogueTitle;
+      qPrompt.textContent = "Konec dialogu.";
+      qText.textContent = turn.text;
+      qText.classList.remove("hidden-q");
+      recordBtn.classList.add("hidden");
+      skipBtn?.classList.add("hidden");
+      replayBtn.textContent = "Replay";
+
+      if (autoSpeak) {
+        try {
+          busy = true;
+          setBusyUi(true);
+          await playSpoken(`turn-${index}`, turn.text);
+          index += 1;
+          if (index >= session.turns.length) {
+            setStatus(examStatus, "Scoring your questions…");
+            await Promise.allSettled(pendingGrades);
+            await finishSession();
+            return;
+          }
+          await renderT2Turn({ autoSpeak: true });
+        } catch (err) {
+          setStatus(examStatus, err.message, true);
+        } finally {
+          busy = false;
+          setBusyUi(false);
+        }
+      }
+      return;
+    }
+
+    // ask turn
+    const askNum = answers.length + 1;
+    const totalAsks = session.totalAsks || 8;
+    qMeta.textContent = `Question ${askNum} of ${totalAsks}`;
+    qTopic.textContent = turn.isFree
+      ? "Vaše otázka"
+      : turn.hint || "Zeptejte se";
+    qPrompt.textContent = turn.isFree
+      ? "Vymyslete vlastní otázku k této situaci (formální vy)."
+      : `Zeptejte se podle nápovědy: ${turn.hint}`;
+    qText.textContent = turn.isFree
+      ? "…? (vaše otázka)"
+      : turn.model_question || turn.hint;
+    // On exam, model question is a hint only if user opts in — keep visible as guide for practice
+    qText.classList.toggle("hidden-q", false);
+    qText.classList.add("model-hint");
+    recordBtn.classList.remove("hidden");
+    skipBtn?.classList.remove("hidden");
+    recordBtn.textContent = "Press to ask";
+    replayBtn.textContent = "Replay last";
+
+    // Prefetch reply
+    if (turn.reply) {
+      ensureAudioText(`reply-${index}`, turn.reply).catch(() => {});
+    }
+
+    if (!autoSpeak) {
+      setStatus(
+        examStatus,
+        "Your turn — press the button and ask your question (formal vy).",
+      );
     }
   };
 
@@ -364,7 +672,6 @@
       const mime = MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
         ? "audio/webm;codecs=opus"
         : "audio/webm";
-      // Low bitrate keeps Hostinger→VPS uploads fast for short A2 answers.
       try {
         mediaRecorder = new MediaRecorder(mediaStream, {
           mimeType: mime,
@@ -378,7 +685,8 @@
       };
       mediaRecorder.start();
       recordBtn.classList.add("recording");
-      recordBtn.textContent = "Stop · listening…";
+      recordBtn.textContent =
+        activeTask === 2 ? "Stop · listening…" : "Stop · listening…";
       setStatus(examStatus, "Recording — press again or release to stop.");
     } catch {
       setStatus(examStatus, "Microphone permission needed.", true);
@@ -401,14 +709,19 @@
     mediaStream?.getTracks().forEach((t) => t.stop());
     mediaStream = null;
     recordBtn.classList.remove("recording");
-    recordBtn.textContent = "Press to answer";
+    recordBtn.textContent =
+      activeTask === 2 ? "Press to ask" : "Press to answer";
 
     if (blob.size < 800) {
       setStatus(examStatus, "Recording too short — try again.", true);
       return;
     }
 
-    await processAnswer(blob);
+    if (activeTask === 2) {
+      await processAsk(blob);
+    } else {
+      await processAnswer(blob);
+    }
   };
 
   const showAttemptFeedback = (transcript, feedback) => {
@@ -441,6 +754,7 @@
           audio: dataUrl,
           mime: blob.type || "audio/webm",
           question: questionText,
+          mode: "answer",
         }),
       });
       data = await res.json().catch(() => ({}));
@@ -462,6 +776,48 @@
         score: 0,
         note: "No feedback returned",
         better: null,
+      },
+    };
+  };
+
+  const gradeAsk = async (blob, turn) => {
+    const dataUrl = await blobToBase64(blob);
+    let attempt = 0;
+    let data = null;
+    while (attempt < 3) {
+      attempt += 1;
+      const res = await fetch("api/answer.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          audio: dataUrl,
+          mime: blob.type || "audio/webm",
+          mode: "ask",
+          situation: turn.situation || "",
+          hint: turn.hint || "",
+          model_question: turn.model_question || "",
+          is_free: Boolean(turn.isFree),
+        }),
+      });
+      data = await res.json().catch(() => ({}));
+      if (res.ok) break;
+      if (res.status === 429) {
+        await sleep((Number(data.retry_after) || 20) * 1000);
+        continue;
+      }
+      throw new Error(data.error || `Grading failed (${res.status})`);
+    }
+    if (!data || data.error) {
+      throw new Error(data?.error || "Grading failed");
+    }
+    const transcript = (data.transcript || "").trim();
+    return {
+      transcript,
+      feedback: data.feedback || {
+        ok: false,
+        score: 0,
+        note: "No feedback returned",
+        better: turn.model_question || null,
       },
     };
   };
@@ -500,19 +856,22 @@
     const slot = {
       ...q,
       answer: "(scoring…)",
-      feedback: { ok: false, score: 0, note: "Scoring in background…", better: null },
+      feedback: {
+        ok: false,
+        score: 0,
+        note: "Scoring in background…",
+        better: null,
+      },
       pending: true,
     };
     answers.push(slot);
 
-    // Score in background — do not block the next question.
     enqueueGrade(async () => {
       try {
         const { transcript, feedback } = await gradeAnswer(blob, q.question);
         slot.answer = transcript || "(no speech detected)";
         slot.feedback = feedback;
         slot.pending = false;
-        // If user is still on a later question, briefly show last score in status.
         if (examPanel && !examPanel.classList.contains("hidden")) {
           const score = Number(feedback?.score) || 0;
           const note = String(feedback?.note || "").slice(0, 80);
@@ -536,6 +895,81 @@
     await advanceAfterAnswer();
   };
 
+  const processAsk = async (blob) => {
+    const turn = currentTurn();
+    if (!turn || turn.kind !== "ask") return;
+
+    const slot = {
+      task: 2,
+      dialogueId: turn.dialogueId,
+      dialogueTitle: turn.dialogueTitle,
+      situation: turn.situation,
+      hint: turn.hint,
+      isFree: Boolean(turn.isFree),
+      model_question: turn.model_question,
+      question: turn.model_question || turn.hint,
+      topic: turn.dialogueTitle,
+      answer: "(scoring…)",
+      feedback: {
+        ok: false,
+        score: 0,
+        note: "Scoring in background…",
+        better: turn.model_question || null,
+      },
+      pending: true,
+    };
+    answers.push(slot);
+    updateProgress();
+
+    enqueueGrade(async () => {
+      try {
+        const { transcript, feedback } = await gradeAsk(blob, turn);
+        slot.answer = transcript || "(no speech detected)";
+        slot.feedback = feedback;
+        slot.pending = false;
+        if (examPanel && !examPanel.classList.contains("hidden")) {
+          const score = Number(feedback?.score) || 0;
+          const note = String(feedback?.note || "").slice(0, 80);
+          setStatus(
+            examStatus,
+            `Scored previous: ${score}/5${note ? ` · ${note}` : ""}`,
+          );
+        }
+      } catch (err) {
+        slot.answer = "(scoring failed)";
+        slot.feedback = {
+          ok: false,
+          score: 0,
+          note: err.message || "Scoring failed",
+          better: turn.model_question || null,
+        };
+        slot.pending = false;
+      }
+    });
+
+    // Examiner replies, then next turn
+    try {
+      busy = true;
+      setBusyUi(true);
+      if (turn.reply) {
+        await playSpoken(`reply-${index}`, turn.reply);
+      }
+      index += 1;
+      if (index >= (session?.turns?.length || 0)) {
+        setStatus(examStatus, "Scoring your questions…");
+        await Promise.allSettled(pendingGrades);
+        await finishSession();
+        return;
+      }
+      await renderT2Turn({ autoSpeak: true });
+    } catch (err) {
+      setStatus(examStatus, err.message, true);
+    } finally {
+      busy = false;
+      setBusyUi(false);
+    }
+  };
+
   const clearAudioCache = () => {
     audioCache = new Map();
     prefetchReady = 0;
@@ -546,15 +980,25 @@
     clearAudioCache();
     showPanel("summary");
     pageTitle.textContent = "Summary";
-    const scored = answers.filter((a) => !a.pending && (Number(a.feedback?.score) || 0) > 0);
+    const scored = answers.filter(
+      (a) => !a.pending && (Number(a.feedback?.score) || 0) > 0,
+    );
     topMeta.innerHTML = `Answered <strong>${answers.length}</strong> · scored <strong>${scored.length}</strong>`;
     updateProgress();
 
     summaryList.innerHTML = answers.length
       ? answers
-          .map(
-            (item) => `<li>
-          <p class="summary-q">${escapeHtml(item.topic)} · ${escapeHtml(resolveGenderForm(item.question, askedGender))}</p>
+          .map((item) => {
+            const head =
+              activeTask === 2
+                ? `${escapeHtml(item.dialogueTitle || item.topic)} · ${escapeHtml(item.isFree ? "vaše otázka" : item.hint || "")}`
+                : `${escapeHtml(item.topic)} · ${escapeHtml(resolveGenderForm(item.question, askedGender))}`;
+            const model =
+              activeTask === 2 && item.model_question
+                ? `<p class="summary-note">Model: ${escapeHtml(item.model_question)}</p>`
+                : "";
+            return `<li>
+          <p class="summary-q">${head}</p>
           <p class="summary-a">${escapeHtml(item.answer || "—")}</p>
           ${
             item.pending
@@ -565,10 +1009,11 @@
                   ? `<p class="summary-note">${escapeHtml(item.feedback.note)}</p>`
                   : ""
           }
-        </li>`,
-          )
+          ${model}
+        </li>`;
+          })
           .join("")
-      : "<li><p class=\"summary-note\">No answers yet.</p></li>";
+      : '<li><p class="summary-note">No answers yet.</p></li>';
     pendingGrades = [];
   };
 
@@ -576,8 +1021,10 @@
     if (questionCountSelect) {
       questionCountSelect.value = String(questionCount);
     }
-    progressLabel.textContent = `/ ${questionCount}`;
-    topMeta.innerHTML = `Practice <strong>${questionCount} questions</strong>`;
+    if (activeTask === 1) {
+      progressLabel.textContent = `/ ${questionCount}`;
+      topMeta.innerHTML = `Practice <strong>${questionCount} questions</strong>`;
+    }
   };
 
   const setQuestionCount = (value) => {
@@ -597,9 +1044,17 @@
     return `api/session.php?${params.toString()}`;
   };
 
-  const startSession = async () => {
-    setStatus(homeStatus, "Preparing exam session…");
-    startBtn.disabled = true;
+  const buildSessionT2Url = () => {
+    const params = new URLSearchParams({ count: "2" });
+    if (selectedDialogueIds.size) {
+      params.set("ids", [...selectedDialogueIds].join(","));
+    }
+    return `api/session-t2.php?${params.toString()}`;
+  };
+
+  const startSessionT1 = async () => {
+    setStatus(homeStatusT1, "Preparing exam session…");
+    startBtnT1.disabled = true;
     try {
       session = await apiJson(buildSessionUrl());
       index = 0;
@@ -608,7 +1063,11 @@
       gradeQueue = Promise.resolve();
       clearAudioCache();
       showPanel("exam");
-      setStatus(homeStatus, "");
+      scenarioCard.classList.add("hidden");
+      recordBtn.classList.remove("hidden");
+      skipBtn?.classList.remove("hidden");
+      replayBtn.textContent = "Replay question";
+      setStatus(homeStatusT1, "");
       setStatus(
         examStatus,
         `Preparing examiner audio (1/${session.questions.length})…`,
@@ -617,18 +1076,54 @@
       prefetchRestAudio();
       await renderQuestion({ autoSpeak: true });
     } catch (err) {
-      setStatus(homeStatus, err.message, true);
+      setStatus(homeStatusT1, err.message, true);
       selectingLocked = false;
-      renderTopics();
+      renderSidebarList();
     } finally {
-      startBtn.disabled = false;
+      startBtnT1.disabled = false;
     }
+  };
+
+  const startSessionT2 = async () => {
+    setStatus(homeStatusT2, "Preparing dialogue session…");
+    startBtnT2.disabled = true;
+    try {
+      session = await apiJson(buildSessionT2Url());
+      index = 0;
+      answers = [];
+      pendingGrades = [];
+      gradeQueue = Promise.resolve();
+      clearAudioCache();
+      lastSpokenText = "";
+      showPanel("exam");
+      setStatus(homeStatusT2, "");
+      setStatus(examStatus, "Preparing examiner…");
+      // Prefetch first opening
+      const first = session.turns?.[0];
+      if (first?.kind === "opening") {
+        await ensureAudioText("turn-0", first.text);
+      }
+      prefetchRestAudio();
+      await renderT2Turn({ autoSpeak: true });
+    } catch (err) {
+      setStatus(homeStatusT2, err.message, true);
+      selectingLocked = false;
+      renderSidebarList();
+    } finally {
+      startBtnT2.disabled = false;
+    }
+  };
+
+  const startSession = async () => {
+    if (activeTask === 2) return startSessionT2();
+    return startSessionT1();
   };
 
   const syncRateSelects = (value) => {
     playbackRate = Number(value) || 1;
-    speechRate.value = String(playbackRate);
-    speechRateExam.value = String(playbackRate);
+    if (speechRate) speechRate.value = String(playbackRate);
+    if (speechRateT2) speechRateT2.value = String(playbackRate);
+    if (speechRateExam) speechRateExam.value = String(playbackRate);
     localStorage.setItem(rateStorageKey, String(playbackRate));
     if (currentAudio) {
       currentAudio.playbackRate = playbackRate;
@@ -645,7 +1140,13 @@
     if (q) {
       qText.textContent = resolveGenderForm(q.question, askedGender);
     }
-    if (replay && session && !examPanel.classList.contains("hidden") && !busy) {
+    if (
+      replay &&
+      activeTask === 1 &&
+      session &&
+      !examPanel.classList.contains("hidden") &&
+      !busy
+    ) {
       prefetchRestAudio();
       speakQuestionAt(index).catch((err) =>
         setStatus(examStatus, err.message, true),
@@ -668,14 +1169,30 @@
       } catch {
         selectedTopicIds = new Set();
       }
-
-      renderTopics();
-      const totalQs = topicsCatalog.reduce((sum, t) => sum + t.count, 0);
-      progressCount.textContent = "0";
-      syncQuestionCountUi();
-      topMeta.innerHTML = `Bank <strong>${totalQs} questions · ${topicsCatalog.length} topics</strong> · session <strong>${questionCount}</strong>`;
     } catch (err) {
-      setStatus(homeStatus, err.message, true);
+      setStatus(homeStatusT1, err.message, true);
+    }
+  };
+
+  const loadDialogues = async () => {
+    try {
+      const data = await apiJson("api/dialogues.php");
+      dialoguesCatalog = data.dialogues || [];
+
+      try {
+        const saved = JSON.parse(
+          localStorage.getItem(dialoguesStorageKey) || "[]",
+        );
+        if (Array.isArray(saved)) {
+          selectedDialogueIds = new Set(
+            saved.filter((id) => dialoguesCatalog.some((d) => d.id === id)),
+          );
+        }
+      } catch {
+        selectedDialogueIds = new Set();
+      }
+    } catch (err) {
+      setStatus(homeStatusT2, err.message, true);
     }
   };
 
@@ -685,32 +1202,63 @@
     if (!btn) return;
     const id = btn.dataset.id;
     if (!id) return;
-    if (selectedTopicIds.has(id)) selectedTopicIds.delete(id);
-    else selectedTopicIds.add(id);
-    persistTopics();
-    renderTopics();
+    if (activeTask === 2) {
+      if (selectedDialogueIds.has(id)) selectedDialogueIds.delete(id);
+      else selectedDialogueIds.add(id);
+      persistDialogues();
+    } else {
+      if (selectedTopicIds.has(id)) selectedTopicIds.delete(id);
+      else selectedTopicIds.add(id);
+      persistTopics();
+    }
+    renderSidebarList();
   });
 
   clearTopicsBtn.addEventListener("click", () => {
     if (selectingLocked) return;
-    selectedTopicIds.clear();
-    persistTopics();
-    renderTopics();
+    if (activeTask === 2) {
+      selectedDialogueIds.clear();
+      persistDialogues();
+    } else {
+      selectedTopicIds.clear();
+      persistTopics();
+    }
+    renderSidebarList();
   });
 
   randomTwoBtn.addEventListener("click", () => {
     if (selectingLocked) return;
-    const pool = [...topicsCatalog];
-    for (let i = pool.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [pool[i], pool[j]] = [pool[j], pool[i]];
+    if (activeTask === 2) {
+      const pool = [...dialoguesCatalog];
+      for (let i = pool.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      selectedDialogueIds = new Set(pool.slice(0, 2).map((d) => d.id));
+      persistDialogues();
+    } else {
+      const pool = [...topicsCatalog];
+      for (let i = pool.length - 1; i > 0; i -= 1) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [pool[i], pool[j]] = [pool[j], pool[i]];
+      }
+      selectedTopicIds = new Set(pool.slice(0, 2).map((t) => t.id));
+      persistTopics();
     }
-    selectedTopicIds = new Set(pool.slice(0, 2).map((t) => t.id));
-    persistTopics();
-    renderTopics();
+    renderSidebarList();
   });
 
-  speechRate.addEventListener("change", () => syncRateSelects(speechRate.value));
+  taskTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      if (selectingLocked) return;
+      setActiveTask(Number(tab.dataset.task) === 2 ? 2 : 1);
+    });
+  });
+
+  speechRate?.addEventListener("change", () => syncRateSelects(speechRate.value));
+  speechRateT2?.addEventListener("change", () =>
+    syncRateSelects(speechRateT2.value),
+  );
   speechRateExam.addEventListener("change", () =>
     syncRateSelects(speechRateExam.value),
   );
@@ -732,21 +1280,27 @@
   const savedGender = localStorage.getItem(genderStorageKey);
   syncGenderSelects(savedGender === "female" ? "female" : "male");
 
-  startBtn.addEventListener("click", startSession);
+  startBtnT1?.addEventListener("click", startSessionT1);
+  startBtnT2?.addEventListener("click", startSessionT2);
   againBtn.addEventListener("click", startSession);
   homeBtn.addEventListener("click", () => {
     stopPlayback();
     clearAudioCache();
     showPanel("home");
-    pageTitle.textContent = "Otázky";
     index = 0;
     session = null;
+    answers = [];
+    applyTaskChrome();
     updateProgress();
-    const totalQs = topicsCatalog.reduce((sum, t) => sum + t.count, 0);
-    topMeta.innerHTML = `Bank <strong>${totalQs} questions · ${topicsCatalog.length} topics</strong>`;
+    if (activeTask === 2) {
+      topMeta.innerHTML = `Bank <strong>${dialoguesCatalog.length} situations</strong> · session <strong>2 dialogues</strong>`;
+    } else {
+      const totalQs = topicsCatalog.reduce((sum, t) => sum + t.count, 0);
+      topMeta.innerHTML = `Bank <strong>${totalQs} questions · ${topicsCatalog.length} topics</strong>`;
+    }
   });
 
-  showQuestionsToggle.addEventListener("click", () => {
+  showQuestionsToggle?.addEventListener("click", () => {
     showQuestionText = !showQuestionText;
     showQuestionsToggle.textContent = showQuestionText
       ? "Hide question text"
@@ -755,12 +1309,28 @@
   });
 
   replayBtn.addEventListener("click", async () => {
-    const q = currentQuestion();
-    if (!q || busy) return;
+    if (busy) return;
     try {
       busy = true;
       setBusyUi(true);
-      await speakQuestionAt(index);
+      if (activeTask === 2) {
+        const turn = currentTurn();
+        if (turn?.kind === "ask" && lastSpokenText) {
+          await playSpoken("replay-last", lastSpokenText);
+          setStatus(
+            examStatus,
+            "Your turn — press the button and ask your question (formal vy).",
+          );
+        } else if (turn?.kind === "opening" || turn?.kind === "closing") {
+          await playSpoken(`turn-${index}`, turn.text);
+        } else if (lastSpokenText) {
+          await playSpoken("replay-last", lastSpokenText);
+        }
+      } else {
+        const q = currentQuestion();
+        if (!q) return;
+        await speakQuestionAt(index);
+      }
     } catch (err) {
       setStatus(examStatus, err.message, true);
     } finally {
@@ -770,7 +1340,7 @@
   });
 
   recordBtn.addEventListener("pointerdown", (e) => {
-    if (busy) return;
+    if (busy || recordBtn.classList.contains("hidden")) return;
     e.preventDefault();
     recordBtn.setPointerCapture?.(e.pointerId);
     recordPointerId = e.pointerId;
@@ -798,6 +1368,45 @@
 
   skipBtn?.addEventListener("click", async () => {
     if (busy) return;
+    if (activeTask === 2) {
+      const turn = currentTurn();
+      if (!turn || turn.kind !== "ask") return;
+      answers.push({
+        task: 2,
+        dialogueId: turn.dialogueId,
+        dialogueTitle: turn.dialogueTitle,
+        hint: turn.hint,
+        isFree: Boolean(turn.isFree),
+        model_question: turn.model_question,
+        question: turn.model_question || turn.hint,
+        topic: turn.dialogueTitle,
+        answer: "(skipped)",
+        feedback: { ok: false, score: 0, note: "Skipped", better: null },
+        pending: false,
+      });
+      updateProgress();
+      setStatus(examStatus, "Skipped — continuing…");
+      try {
+        busy = true;
+        setBusyUi(true);
+        if (turn.reply) {
+          await playSpoken(`reply-${index}`, turn.reply);
+        }
+        index += 1;
+        if (index >= (session?.turns?.length || 0)) {
+          await Promise.allSettled(pendingGrades);
+          await finishSession();
+          return;
+        }
+        await renderT2Turn({ autoSpeak: true });
+      } catch (err) {
+        setStatus(examStatus, err.message, true);
+      } finally {
+        busy = false;
+        setBusyUi(false);
+      }
+      return;
+    }
     const q = currentQuestion();
     if (q) {
       answers.push({
@@ -813,12 +1422,17 @@
 
   nextBtn?.addEventListener("click", () => {
     if (busy) return;
-    setStatus(examStatus, "Answer or press Skip to continue.");
+    setStatus(
+      examStatus,
+      activeTask === 2
+        ? "Ask a question or press Skip to continue."
+        : "Answer or press Skip to continue.",
+    );
   });
 
   stopExamBtn.addEventListener("click", async () => {
     if (!session) return;
-    setStatus(examStatus, "Scoring your answers…");
+    setStatus(examStatus, "Scoring…");
     busy = true;
     setBusyUi(true);
     await Promise.allSettled(pendingGrades);
@@ -827,5 +1441,9 @@
     await finishSession();
   });
 
-  loadTopics();
+  (async () => {
+    await Promise.all([loadTopics(), loadDialogues()]);
+    const savedTask = localStorage.getItem(taskStorageKey);
+    setActiveTask(savedTask === "2" ? 2 : 1, { resetHome: true });
+  })();
 })();

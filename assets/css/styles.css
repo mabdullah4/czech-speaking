@@ -91,9 +91,45 @@ button {
   text-transform: uppercase;
 }
 
+.task-switch {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 6px;
+  flex: 0 0 auto;
+  margin: 18px 0 0;
+  padding: 0 2px;
+}
+
+.task-tab {
+  min-height: 34px;
+  padding: 0 10px;
+  border: 1px solid #ffffff28;
+  border-radius: 3px;
+  background: transparent;
+  color: #c5d0c5;
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+  cursor: pointer;
+  transition: background .16s, color .16s, border-color .16s;
+}
+
+.task-tab:hover {
+  color: #fff;
+  border-color: #ffffff55;
+}
+
+.task-tab.active {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--green-dark);
+  font-weight: 700;
+}
+
 .nav-label {
   flex: 0 0 auto;
-  margin: 25px 10px 9px;
+  margin: 18px 10px 9px;
   color: #a9b8aa;
   font-family: var(--mono);
   font-size: 10px;
@@ -451,6 +487,60 @@ select {
 
 .exam-stage {
   padding: 8px 0 24px;
+}
+
+.scenario-card {
+  margin: 0 0 18px;
+  padding: 18px 20px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: linear-gradient(160deg, #fffefa 0%, #eef3e4 100%);
+}
+
+.scenario-label {
+  margin-bottom: 8px;
+  color: var(--green);
+  font-family: var(--mono);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.scenario-situation {
+  margin: 0 0 14px;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.45;
+}
+
+.scenario-hints-label {
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.scenario-hints {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.scenario-hints li.active {
+  font-weight: 800;
+  color: var(--green-dark);
+}
+
+.scenario-hints li.active::marker {
+  color: var(--coral);
+}
+
+.q-text.model-hint {
+  color: var(--muted);
+  font-size: 16px;
+  font-weight: 600;
+  font-style: italic;
 }
 
 .topic-chip-row {

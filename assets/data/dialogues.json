@@ -1,0 +1,244 @@
+{
+  "dialogues": [
+    {
+      "id": "hotel",
+      "title": "Hotel",
+      "situation": "Jste na recepci hotelu. Chcete ubytování na několik dnů i se snídaní.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Volný pokoj?", "Kč za noc?", "Hodina snídaně?"],
+      "model_questions": [
+        "Máte volný pokoj na 3 noci?",
+        "Kolik stojí za jednu noc?",
+        "V kolik hodin je snídaně?"
+      ],
+      "replies": [
+        "Ano, máme volný jednolůžkový pokoj.",
+        "Cena je 1 200 Kč za noc i se snídaní.",
+        "Snídaně je od sedmi do deseti hodin."
+      ],
+      "free_model": "Je v hotelu výtah?",
+      "free_reply": "Ano, výtah je na konci chodby vlevo.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "notebook",
+      "title": "Oprava notebooku",
+      "situation": "Jste v prodejně notebooků. Rozbil se vám notebook a potřebujete poradit.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Možnost opravy?", "Kč?", "Doba trvání opravy?"],
+      "model_questions": [
+        "Mám rozbitý notebook. Můžete ho prosím opravit?",
+        "Kolik stojí oprava?",
+        "Jak dlouho oprava trvá?"
+      ],
+      "replies": [
+        "Ano, máme zde i servis a děláme opravy.",
+        "Většinou 2 000 až 5 000 Kč.",
+        "Asi jeden týden."
+      ],
+      "free_model": "Budu platit teď, nebo až po opravě?",
+      "free_reply": "Platit budete, až bude oprava hotová.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "boty",
+      "title": "Obchod s obuví",
+      "situation": "Jste v obchodě s obuví. Potřebujete boty na sport. Prodavač vám ukazuje bílé sportovní boty.",
+      "opening": "Doporučuju vám tyto sportovní boty.",
+      "hints": ["Velikost?", "Kč?", "Materiál?"],
+      "model_questions": [
+        "Máte je ve velikosti 40?",
+        "Kolik stojí?",
+        "Jaký je to materiál?"
+      ],
+      "replies": [
+        "Ano, máme.",
+        "Stojí 1 300 Kč.",
+        "Jsou kožené."
+      ],
+      "free_model": "Máte je i v jiné barvě?",
+      "free_reply": "Ano, máme je také v černé a modré barvě.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "byt",
+      "title": "Prohlídka bytu",
+      "situation": "Jste na prohlídce bytu. Chcete si pronajmout byt.",
+      "opening": "Dobrý den, máte k bytu nějaké otázky?",
+      "hints": ["Kč?", "Pes?", "Datum stěhování?"],
+      "model_questions": [
+        "Kolik budu platit za nájem?",
+        "Můžu mít v bytě psa?",
+        "Kdy se můžu do bytu nastěhovat?"
+      ],
+      "replies": [
+        "Nájem je 9 000 Kč měsíčně.",
+        "Ano, můžete tady mít domácí zvíře.",
+        "Byt bude volný od začátku příštího měsíce."
+      ],
+      "free_model": "Je v domě garáž na auto?",
+      "free_reply": "Není, ale můžete parkovat na ulici.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "lekarna",
+      "title": "Lékárna",
+      "situation": "Jste v lékárně. Bolí vás hlava a potřebujete lék.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Lék na bolest hlavy?", "Kč?", "Jak často brát?"],
+      "model_questions": [
+        "Máte něco na bolest hlavy?",
+        "Kolik to stojí?",
+        "Jak často to mám brát?"
+      ],
+      "replies": [
+        "Ano, doporučuju tyto tablety.",
+        "Stojí 89 Kč.",
+        "Jednu tabletu třikrát denně po jídle."
+      ],
+      "free_model": "Můžu to brát s alkoholem?",
+      "free_reply": "Ne, s alkoholem to brát nemůžete.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "posta",
+      "title": "Pošta",
+      "situation": "Jste na poště. Chcete poslat balík do zahraničí.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Kam poslat?", "Kč?", "Jak dlouho trvá?"],
+      "model_questions": [
+        "Můžu poslat tento balík do Německa?",
+        "Kolik bude stát zásilka?",
+        "Jak dlouho to bude trvat?"
+      ],
+      "replies": [
+        "Ano, do Německa posíláme.",
+        "Asi 250 Kč.",
+        "Obvykle tři až pět dní."
+      ],
+      "free_model": "Dostanu potvrzení o odeslání?",
+      "free_reply": "Ano, dostanete potvrzení.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "vlak",
+      "title": "Nádraží",
+      "situation": "Jste na nádraží. Chcete koupit jízdenku do Brna.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Jízdenka do Brna?", "Kč?", "V kolik hodin?"],
+      "model_questions": [
+        "Máte jízdenku do Brna na dnes?",
+        "Kolik stojí jízdenka?",
+        "V kolik hodin jede další vlak?"
+      ],
+      "replies": [
+        "Ano, máme.",
+        "Stojí 220 Kč.",
+        "Další vlak jede v 14:30."
+      ],
+      "free_model": "Můžu platit kartou?",
+      "free_reply": "Ano, kartou platit můžete.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "restaurace",
+      "title": "Restaurace",
+      "situation": "Jste v restauraci. Chcete si rezervovat stůl na večer.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Volný stůl?", "V kolik hodin?", "Menu?"],
+      "model_questions": [
+        "Máte volný stůl na dnes večer pro čtyři osoby?",
+        "V kolik hodin můžeme přijít?",
+        "Máte vegetariánské menu?"
+      ],
+      "replies": [
+        "Ano, máme stůl na osm hodin.",
+        "Můžete přijít od sedmi do devíti.",
+        "Ano, máme vegetariánská jídla."
+      ],
+      "free_model": "Je u stolu i dětská židlička?",
+      "free_reply": "Ano, dětskou židličku máme.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "lekar",
+      "title": "U lékaře",
+      "situation": "Jste v ordinaci. Chcete se objednat k lékaři.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Termín?", "Kdy?", "Pojištění?"],
+      "model_questions": [
+        "Můžu se objednat k doktorovi?",
+        "Kdy máte nejbližší volný termín?",
+        "Potřebujete kartičku pojištěnce?"
+      ],
+      "replies": [
+        "Ano, můžu vás objednat.",
+        "Nejbližší termín je ve čtvrtek v deset hodin.",
+        "Ano, kartičku pojištěnce potřebujeme."
+      ],
+      "free_model": "Jak dlouho budu čekat?",
+      "free_reply": "Obvykle asi dvacet minut.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "kadernik",
+      "title": "Kadeřnictví",
+      "situation": "Jste v kadeřnictví. Chcete si nechat ostříhat vlasy.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Volný termín?", "Kč?", "Jak dlouho?"],
+      "model_questions": [
+        "Máte dnes volný termín na střih?",
+        "Kolik stojí střih?",
+        "Jak dlouho to bude trvat?"
+      ],
+      "replies": [
+        "Ano, máme volno od tří hodin.",
+        "Střih stojí 450 Kč.",
+        "Asi čtyřicet minut."
+      ],
+      "free_model": "Můžu platit kartou?",
+      "free_reply": "Ano, kartou i hotově.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "knihovna",
+      "title": "Knihovna",
+      "situation": "Jste v knihovně. Chcete si půjčit knihu a zjistit podmínky.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Registrace?", "Kč?", "Jak dlouho půjčit?"],
+      "model_questions": [
+        "Jak se můžu zaregistrovat?",
+        "Kolik stojí registrace?",
+        "Na jak dlouho si můžu půjčit knihu?"
+      ],
+      "replies": [
+        "Potřebujete občanský průkaz a vyplníte formulář.",
+        "Registrace stojí 100 Kč na rok.",
+        "Knihu můžete mít měsíc."
+      ],
+      "free_model": "Můžu si půjčit i anglické knihy?",
+      "free_reply": "Ano, máme i cizojazyčné knihy.",
+      "closing": "Není zač."
+    },
+    {
+      "id": "kino",
+      "title": "Kino",
+      "situation": "Jste v kině u pokladny. Chcete koupit lístky na film.",
+      "opening": "Dobrý den. Co pro vás můžu udělat?",
+      "hints": ["Lístky?", "Kč?", "V kolik hodin?"],
+      "model_questions": [
+        "Máte ještě lístky na dnešní večer?",
+        "Kolik stojí jeden lístek?",
+        "V kolik hodin film začíná?"
+      ],
+      "replies": [
+        "Ano, ještě pár míst máme.",
+        "Lístek stojí 180 Kč.",
+        "Film začíná v 19:30."
+      ],
+      "free_model": "Je film v češtině nebo s titulky?",
+      "free_reply": "Je v angličtině s českými titulky.",
+      "closing": "Není zač."
+    }
+  ]
+}

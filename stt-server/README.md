@@ -29,6 +29,16 @@ Port **8091** is restricted on Contabo to the Hostinger `numbertools.eu` server 
 
 API key is still required as a second layer.
 
+## Endpoints
+
+| Path | Use |
+|------|-----|
+| `GET /health` | Liveness |
+| `POST /v1/answer` | Task 1 — form fields `question` + `audio` |
+| `POST /v1/ask` | Task 2 — form fields `situation`, `hint`, `model_question`, `is_free` (`0`/`1`) + `audio` |
+
+`/v1/ask` scores interrogative form, formal *vy*, and match to the card hint (or situation relevance for the free question). Notes are in English; score 1–5.
+
 ## Models
 
 | Model | RAM (int8) | Quality |

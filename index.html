@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#f4f3ed" />
-    <title>Čeština | A2 Speaking · Úloha 1</title>
+    <title>Čeština | A2 Speaking</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -23,13 +23,23 @@
             <div class="brand-sub">Czech study desk</div>
           </div>
         </div>
-        <div class="nav-label">Pick topics · or leave empty for random 2</div>
+
+        <div class="task-switch" role="tablist" aria-label="Speaking task">
+          <button type="button" class="task-tab active" data-task="1" role="tab" aria-selected="true">
+            Úloha 1
+          </button>
+          <button type="button" class="task-tab" data-task="2" role="tab" aria-selected="false">
+            Úloha 2
+          </button>
+        </div>
+
+        <div class="nav-label" id="sidebarNavLabel">Pick topics · or leave empty for random 2</div>
         <nav class="topic-list" id="topicList" aria-label="Speaking topics"></nav>
         <div class="sidebar-pick-actions">
           <button type="button" class="side-link" id="clearTopicsBtn">Clear</button>
           <button type="button" class="side-link" id="randomTwoBtn">Random 2</button>
         </div>
-        <div class="sidebar-foot">
+        <div class="sidebar-foot" id="sidebarFoot">
           A2 · TRVALÝ POBYT<br />
           MLUVENÍ · ÚLOHA 1
         </div>
@@ -37,7 +47,7 @@
 
       <main class="main">
         <header class="topbar">
-          <div class="crumb">
+          <div class="crumb" id="crumb">
             Study desk <span aria-hidden="true">/</span> Speaking T1
           </div>
           <div class="top-meta" id="topMeta">
@@ -60,7 +70,8 @@
         </div>
 
         <section class="study-area" id="studyArea" aria-live="polite">
-          <div class="hero-panel" id="homePanel">
+          <!-- Task 1 home -->
+          <div class="hero-panel" id="homePanelT1">
             <p>
               Procvičujte ústní část A2: vyberte témata vlevo (nebo nechte
               prázdné → náhodná <strong>2 témata</strong>). Zvolte počet otázek
@@ -111,23 +122,72 @@
               </ul>
             </div>
             <div class="btn-row">
-              <button type="button" class="btn" id="startBtn">Start practice</button>
+              <button type="button" class="btn" id="startBtnT1">Start practice</button>
               <button type="button" class="btn btn-secondary" id="showQuestionsToggle">
                 Show question text
               </button>
             </div>
-            <div class="status-line" id="homeStatus"></div>
+            <div class="status-line" id="homeStatusT1"></div>
+          </div>
+
+          <!-- Task 2 home -->
+          <div class="hero-panel hidden" id="homePanelT2">
+            <p>
+              Úloha 2 — <strong>Dialogy</strong>: vyberte situace vlevo (nebo nechte
+              prázdné → náhodné <strong>2 dialogy</strong>). V každém dialogu položíte
+              <strong>4 otázky</strong> — 3 podle nápovědy na kartě, 1 vlastní. Formální <strong>vy</strong>.
+            </p>
+            <div class="setup-bar" aria-label="Task 2 settings">
+              <label class="setup-field" for="speechRateT2">
+                <span class="field-label">Speech speed</span>
+                <select id="speechRateT2" aria-label="Speech playback speed">
+                  <option value="0.85">0.85× slower</option>
+                  <option value="1" selected>1× normal</option>
+                  <option value="1.25">1.25×</option>
+                  <option value="1.5">1.5× faster</option>
+                  <option value="1.75">1.75×</option>
+                  <option value="2">2× fastest</option>
+                </select>
+              </label>
+              <div class="setup-field">
+                <span class="field-label">Selection</span>
+                <strong class="setup-value" id="selectionSummaryT2">Random 2 dialogues</strong>
+              </div>
+            </div>
+            <div class="rules">
+              <h2>Pravidla jako u zkoušky (od 4/2026)</h2>
+              <ul>
+                <li>Ve 2 situacích se <strong>ptáte vy</strong> — tazatel odpovídá.</li>
+                <li>3 otázky podle bodů na kartě; 4. otázku vymyslíte sami.</li>
+                <li>Vždy formální <strong>vy</strong> (máte, můžete…) a přirozené otázky
+                  (<em>V kolik hodin…?</em>, ne <em>V který čas…?</em>).</li>
+                <li>Začněte pozdravem; na konci poděkujte.</li>
+              </ul>
+            </div>
+            <div class="btn-row">
+              <button type="button" class="btn" id="startBtnT2">Start dialogues</button>
+            </div>
+            <div class="status-line" id="homeStatusT2"></div>
           </div>
 
           <div class="exam-stage hidden" id="examPanel">
             <div class="topic-chip-row" id="topicChips"></div>
+
+            <!-- Task 2 scenario card -->
+            <div class="scenario-card hidden" id="scenarioCard">
+              <div class="scenario-label">Karta situace</div>
+              <p class="scenario-situation" id="scenarioSituation">—</p>
+              <div class="scenario-hints-label">Zeptejte se na 4 informace:</div>
+              <ol class="scenario-hints" id="scenarioHints"></ol>
+            </div>
+
             <div class="question-block">
               <div class="q-meta" id="qMeta">Question 1 of 8</div>
               <div class="q-topic" id="qTopic">—</div>
-              <p class="q-prompt">Poslouchejte otázku a odpovězte celou větou.</p>
+              <p class="q-prompt" id="qPrompt">Poslouchejte otázku a odpovězte celou větou.</p>
               <p class="q-text hidden-q" id="qText">—</p>
               <div class="controls">
-                <button type="button" class="btn btn-secondary" id="replayBtn">Replay question</button>
+                <button type="button" class="btn btn-secondary" id="replayBtn">Replay</button>
                 <button type="button" class="btn btn-record" id="recordBtn">Press to answer</button>
                 <button type="button" class="btn btn-secondary" id="skipBtn">Skip</button>
                 <button type="button" class="btn btn-danger btn-secondary" id="stopExamBtn">End</button>
@@ -142,7 +202,7 @@
                     <option value="2">2×</option>
                   </select>
                 </label>
-                <label class="inline-rate" for="voiceGenderExam">
+                <label class="inline-rate" for="voiceGenderExam" id="voiceGenderExamWrap">
                   <span class="field-label">I answer as</span>
                   <select id="voiceGenderExam" aria-label="Candidate gender for question forms">
                     <option value="male" selected>Male</option>
@@ -151,7 +211,7 @@
                 </label>
               </div>
               <div class="answer-box hidden" id="answerBox">
-                <div class="answer-label">Vaše odpověď</div>
+                <div class="answer-label" id="answerLabel">Vaše odpověď</div>
                 <p class="answer-text" id="answerText"></p>
                 <div class="feedback hidden" id="feedbackBox"></div>
                 <div class="btn-row hidden" style="margin-top: 14px">
@@ -174,6 +234,6 @@
       </main>
     </div>
 
-    <script src="assets/js/app.js?v=20261125b"></script>
+    <script src="assets/js/app.js?v=20261125t2"></script>
   </body>
 </html>

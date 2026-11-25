@@ -2,7 +2,7 @@
 declare(strict_types=1);
 
 /**
- * Grade a spoken answer.
+ * Grade a spoken answer (Task 1) or spoken question (Task 2).
  * Prefer local Whisper on the VPS (no Gemini quota). Fall back to Gemini multimodal.
  */
 
@@ -15,13 +15,25 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode((string) file_get_contents('php://input'), true);
 $audioB64 = (string) ($input['audio'] ?? '');
 $mime = (string) ($input['mime'] ?? 'audio/webm');
+$mode = trim((string) ($input['mode'] ?? 'answer'));
+if ($mode !== 'ask') {
+    $mode = 'answer';
+}
+
 $question = trim((string) ($input['question'] ?? ''));
+$situation = trim((string) ($input['situation'] ?? ''));
+$hint = trim((string) ($input['hint'] ?? ''));
+$modelQuestion = trim((string) ($input['model_question'] ?? ''));
+$isFree = !empty($input['is_free']);
 
 if ($audioB64 === '') {
     json_response(['error' => 'Missing audio'], 400);
 }
-if ($question === '') {
+if ($mode === 'answer' && $question === '') {
     json_response(['error' => 'Missing question'], 400);
+}
+if ($mode === 'ask' && $situation === '') {
+    json_response(['error' => 'Missing situation'], 400);
 }
 
 if (str_starts_with($audioB64, 'data:')) {
@@ -45,32 +57,83 @@ $sttUrl = $STT_URL;
 $sttKey = $STT_API_KEY;
 
 if ($sttUrl !== '') {
-    $localResult = stt_grade_remote($sttUrl, $sttKey, $question, $bytes, $mime);
-    if ($localResult['ok']) {
-        json_response($localResult['data']);
+    if ($mode === 'ask') {
+        $localResult = stt_grade_ask_remote(
+            $sttUrl,
+            $sttKey,
+            $situation,
+            $hint,
+            $modelQuestion,
+            $isFree,
+            $bytes,
+            $mime
+        );
+        if ($localResult['ok']) {
+            json_response($localResult['data']);
+        }
+        // /v1/ask may be missing until Contabo is redeployed — fall through to Gemini.
+        $sttErr = (string) ($localResult['error'] ?? '');
+        $askEndpointMissing = (bool) preg_match('/\b404\b|not found|Method Not Allowed|405/i', $sttErr);
+        if (!$askEndpointMissing) {
+            json_response([
+                'error' => $localResult['error'] ?? 'Local speech recognition failed. Try again.',
+                'source' => 'whisper-local',
+            ], 502);
+        }
+        // else: continue to Gemini ask grading below
+    } else {
+        $localResult = stt_grade_remote($sttUrl, $sttKey, $question, $bytes, $mime);
+        if ($localResult['ok']) {
+            json_response($localResult['data']);
+        }
+        // Do not fall through to Gemini — it is minutes-slow when overloaded.
+        json_response([
+            'error' => $localResult['error'] ?? 'Local speech recognition failed. Try again.',
+            'source' => 'whisper-local',
+        ], 502);
     }
-    // Do not fall through to Gemini — it is minutes-slow when overloaded.
-    json_response([
-        'error' => $localResult['error'] ?? 'Local speech recognition failed. Try again.',
-        'source' => 'whisper-local',
-    ], 502);
 }
 
 require_api_key();
 
-$prompt = "Exam question (Czech): {$question}\n\n"
-    . "Transcribe the learner audio verbatim in Czech (keep mistakes, keep diacritics). "
-    . "Then grade strictly for A2 oral exam (permanent residence).\n"
-    . "Rules: must be ONE full sentence; must make sense as an answer to THIS question. "
-    . "Score 4–5 ONLY if the answer is on-topic AND a clear full sentence. "
-    . "Short yes/no alone, off-topic, or fragmentary answers = max 2–3.\n"
-    . 'Return JSON only: {"heard":"...","ok":true|false,"score":1-5,"note":"short English feedback naming the problem or success","better":"optional model Czech sentence or null"}. '
-    . 'If unintelligible: {"heard":"","ok":false,"score":1,"note":"No clear speech detected.","better":null}';
+if ($mode === 'ask') {
+    $hintLabel = $isFree ? 'learner invents their own question (no fixed hint)' : ($hint !== '' ? $hint : 'general info');
+    $modelLine = $modelQuestion !== '' ? "Model question example: {$modelQuestion}\n" : '';
+    $prompt = "Czech A2 permanent-residence oral exam — Task 2 (Dialogy).\n"
+        . "The learner must ASK a polite formal question (vy), not answer.\n"
+        . "Situation: {$situation}\n"
+        . "Prompt/hint: {$hintLabel}\n"
+        . $modelLine
+        . "Transcribe the learner audio verbatim in Czech (keep mistakes, keep diacritics).\n"
+        . "Then grade strictly:\n"
+        . "- Must be a clear interrogative question (question word or verb-first yes/no question).\n"
+        . "- Must use formal vy (máte/můžete/můžu…), not informal ty (máš/můžeš).\n"
+        . "- For a fixed hint: the question must match that information need.\n"
+        . "- For a free question: any relevant question about THIS situation is OK.\n"
+        . "- Score 4–5 ONLY for a clear, on-topic, formal question.\n"
+        . "- Fragments, statements, informal ty, or off-topic = max 2–3.\n"
+        . 'Return JSON only: {"heard":"...","ok":true|false,"score":1-5,"note":"short English feedback","better":"model Czech question or null"}. '
+        . 'If unintelligible: {"heard":"","ok":false,"score":1,"note":"No clear speech detected.","better":null}';
+
+    $system = 'You are a strict Czech A2 oral-exam examiner grading Task 2 questions. '
+        . 'Feedback notes must be in English. Output JSON only, no markdown.';
+} else {
+    $prompt = "Exam question (Czech): {$question}\n\n"
+        . "Transcribe the learner audio verbatim in Czech (keep mistakes, keep diacritics). "
+        . "Then grade strictly for A2 oral exam (permanent residence).\n"
+        . "Rules: must be ONE full sentence; must make sense as an answer to THIS question. "
+        . "Score 4–5 ONLY if the answer is on-topic AND a clear full sentence. "
+        . "Short yes/no alone, off-topic, or fragmentary answers = max 2–3.\n"
+        . 'Return JSON only: {"heard":"...","ok":true|false,"score":1-5,"note":"short English feedback naming the problem or success","better":"optional model Czech sentence or null"}. '
+        . 'If unintelligible: {"heard":"","ok":false,"score":1,"note":"No clear speech detected.","better":null}';
+
+    $system = 'You are a strict Czech A2 oral-exam examiner. '
+        . 'Feedback notes must be in English. Output JSON only, no markdown.';
+}
 
 $result = gemini_interactions_failover($GOOGLE_API_KEYS, [
     'model' => $LISTEN_MODEL,
-    'system_instruction' => 'You are a strict Czech A2 oral-exam examiner. '
-        . 'Feedback notes must be in English. Output JSON only, no markdown.',
+    'system_instruction' => $system,
     'input' => [
         [
             'type' => 'text',
@@ -130,7 +193,55 @@ json_response([
  */
 function stt_grade_remote(string $baseUrl, string $apiKey, string $question, string $bytes, string $mime): array
 {
-    $url = rtrim($baseUrl, '/') . '/v1/answer';
+    return stt_multipart_post(
+        rtrim($baseUrl, '/') . '/v1/answer',
+        $apiKey,
+        $bytes,
+        $mime,
+        [
+            'question' => $question,
+        ]
+    );
+}
+
+/**
+ * @return array{ok:bool,data?:array,error?:string}
+ */
+function stt_grade_ask_remote(
+    string $baseUrl,
+    string $apiKey,
+    string $situation,
+    string $hint,
+    string $modelQuestion,
+    bool $isFree,
+    string $bytes,
+    string $mime
+): array {
+    return stt_multipart_post(
+        rtrim($baseUrl, '/') . '/v1/ask',
+        $apiKey,
+        $bytes,
+        $mime,
+        [
+            'situation' => $situation,
+            'hint' => $hint,
+            'model_question' => $modelQuestion,
+            'is_free' => $isFree ? '1' : '0',
+        ]
+    );
+}
+
+/**
+ * @param array<string,string> $fields
+ * @return array{ok:bool,data?:array,error?:string}
+ */
+function stt_multipart_post(
+    string $url,
+    string $apiKey,
+    string $bytes,
+    string $mime,
+    array $fields
+): array {
     $boundary = '----speaking' . bin2hex(random_bytes(8));
     $ext = 'webm';
     if (stripos($mime, 'wav') !== false) {
@@ -142,9 +253,11 @@ function stt_grade_remote(string $baseUrl, string $apiKey, string $question, str
     }
 
     $body = '';
-    $body .= "--{$boundary}\r\n";
-    $body .= "Content-Disposition: form-data; name=\"question\"\r\n\r\n";
-    $body .= $question . "\r\n";
+    foreach ($fields as $name => $value) {
+        $body .= "--{$boundary}\r\n";
+        $body .= "Content-Disposition: form-data; name=\"{$name}\"\r\n\r\n";
+        $body .= $value . "\r\n";
+    }
     $body .= "--{$boundary}\r\n";
     $body .= "Content-Disposition: form-data; name=\"audio\"; filename=\"answer.{$ext}\"\r\n";
     $body .= 'Content-Type: ' . $mime . "\r\n\r\n";
