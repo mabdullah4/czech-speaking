@@ -54,32 +54,26 @@ function resolve_gender_form(string $text, string $gender): string
 function static_question_audio(string $text, string $gender): ?array
 {
     $id = substr(hash('sha256', $text), 0, 40);
-    $relDirs = [
-        'assets/audio/questions/' . $gender . '/',
-        // Legacy flat layout (pre gender split)
-        'assets/audio/questions/',
-    ];
+    $rel = 'assets/audio/questions/' . $gender . '/';
     $root = dirname(__DIR__);
-    foreach ($relDirs as $rel) {
-        foreach (['mp3' => 'audio/mpeg', 'wav' => 'audio/wav'] as $ext => $mime) {
-            $path = $root . '/' . $rel . $id . '.' . $ext;
-            if (!is_readable($path)) {
-                continue;
-            }
-            $bytes = file_get_contents($path);
-            if ($bytes === false || $bytes === '') {
-                continue;
-            }
-            return [
-                'mime' => $mime,
-                'audio' => base64_encode($bytes),
-                'url' => $rel . $id . '.' . $ext,
-                'cached' => true,
-                'source' => 'static',
-                'gender' => $gender,
-                'spoken' => resolve_gender_form($text, $gender),
-            ];
+    foreach (['mp3' => 'audio/mpeg', 'wav' => 'audio/wav'] as $ext => $mime) {
+        $path = $root . '/' . $rel . $id . '.' . $ext;
+        if (!is_readable($path)) {
+            continue;
         }
+        $bytes = file_get_contents($path);
+        if ($bytes === false || $bytes === '') {
+            continue;
+        }
+        return [
+            'mime' => $mime,
+            'audio' => base64_encode($bytes),
+            'url' => $rel . $id . '.' . $ext,
+            'cached' => true,
+            'source' => 'static',
+            'gender' => $gender,
+            'spoken' => resolve_gender_form($text, $gender),
+        ];
     }
     return null;
 }
