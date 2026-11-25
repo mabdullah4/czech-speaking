@@ -1,10 +1,17 @@
 #!/usr/bin/env python3
 """Pre-generate Czech question audio for male and female candidate forms.
 
-Examiner voice is always female (Edge TTS cs-CZ-VlastaNeural).
-Folders differ only by grammar addressed to the candidate:
+Examiner voice is always female. Folders differ only by grammar addressed
+to the candidate:
   male/   → rád, dělal, nemocný, …
   female/ → ráda, dělala, nemocná, …
+
+Engines:
+  elevenlabs  — Sarah + eleven_v3 (preferred quality)
+  edge        — Microsoft cs-CZ-VlastaNeural
+  piper       — local Kasandra
+
+ElevenLabs needs ELEVENLABS_API_KEY (or --api-key). Do not commit the key.
 """
 
 from __future__ import annotations
@@ -18,6 +25,9 @@ import re
 import subprocess
 import sys
 import tempfile
+import time
+import urllib.error
+import urllib.request
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -28,12 +38,15 @@ ESPEAK_DATA = ROOT / "tools/piper/piper/espeak-ng-data"
 VOICE_PIPER = ROOT / "tools/piper/voices/cs_CZ-kasandra-medium.onnx"
 MANIFEST = OUT_DIR / "manifest.json"
 
-DEFAULT_ENGINE = os.environ.get("TTS_ENGINE", "edge")
+DEFAULT_ENGINE = os.environ.get("TTS_ENGINE", "elevenlabs")
 DEFAULT_EDGE_RATE = os.environ.get("EDGE_RATE", "-8%")
-# Examiner is always a woman; folders only change candidate grammar forms.
 DEFAULT_EDGE_VOICE = os.environ.get("EDGE_VOICE", "cs-CZ-VlastaNeural")
+DEFAULT_ELEVEN_VOICE = os.environ.get(
+    "ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL"
+)  # Sarah
+DEFAULT_ELEVEN_MODEL = os.environ.get("ELEVENLABS_MODEL", "eleven_v3")
+DEFAULT_ELEVEN_VOICE_NAME = os.environ.get("ELEVENLABS_VOICE_NAME", "Sarah")
 
-# Word pairs where the slash order is female/male (not stem+/a).
 SPECIAL_PAIRS = {
     "vdaná/ženatý": {"male": "ženatý", "female": "vdaná"},
 }
@@ -46,11 +59,8 @@ def resolve_gender(text: str, gender: str) -> str:
     t = text.strip()
     for pair, forms in SPECIAL_PAIRS.items():
         t = t.replace(pair, forms[gender])
-    # nemocný/á → nemocný | nemocná
     t = t.replace("ý/á", "ý" if gender == "male" else "á")
-    # dělal/a, rád/a, nerad/a → dělal|dělala, rád|ráda, …
     t = re.sub(r"/a\b", "" if gender == "male" else "a", t)
-    # Remaining alternatives (bytu/domu, bytě/domě) → "nebo"
     t = t.replace("/", " nebo ")
     while "  " in t:
         t = t.replace("  ", " ")
@@ -118,6 +128,64 @@ async def synthesize_edge(
         raise RuntimeError(f"edge-tts produced empty file for {text!r}")
 
 
+def synthesize_elevenlabs(
+    spoken: str,
+    mp3_path: Path,
+    *,
+    api_key: str,
+    voice_id: str,
+    model_id: str,
+    retries: int = 4,
+) -> None:
+    body = json.dumps(
+        {
+            "text": spoken,
+            "model_id": model_id,
+            "voice_settings": {
+                "stability": 0.45,
+                "similarity_boost": 0.75,
+            },
+        }
+    ).encode("utf-8")
+    url = (
+        f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}"
+        f"?output_format=mp3_44100_128"
+    )
+    last_err: Exception | None = None
+    for attempt in range(1, retries + 1):
+        req = urllib.request.Request(
+            url,
+            data=body,
+            headers={
+                "xi-api-key": api_key,
+                "Content-Type": "application/json",
+                "Accept": "audio/mpeg",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=90) as resp:
+                data = resp.read()
+            if len(data) < 500:
+                raise RuntimeError(f"ElevenLabs returned tiny audio ({len(data)} bytes)")
+            mp3_path.write_bytes(data)
+            return
+        except urllib.error.HTTPError as exc:
+            detail = exc.read().decode("utf-8", errors="replace")[:400]
+            last_err = RuntimeError(f"HTTP {exc.code}: {detail}")
+            if exc.code in {429, 500, 502, 503, 504} and attempt < retries:
+                time.sleep(2 * attempt)
+                continue
+            raise last_err from exc
+        except Exception as exc:  # noqa: BLE001
+            last_err = exc
+            if attempt < retries:
+                time.sleep(2 * attempt)
+                continue
+            raise
+    raise RuntimeError(str(last_err or "ElevenLabs failed"))
+
+
 def wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
     cmd = [
         "ffmpeg",
@@ -139,20 +207,45 @@ def wav_to_mp3(wav_path: Path, mp3_path: Path) -> None:
 
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--engine", choices=("edge", "piper"), default=DEFAULT_ENGINE)
+    parser.add_argument(
+        "--engine",
+        choices=("elevenlabs", "edge", "piper"),
+        default=DEFAULT_ENGINE,
+    )
     parser.add_argument(
         "--gender",
         choices=("male", "female", "both"),
         default="both",
         help="Which gendered clips to generate (default: both)",
     )
-    parser.add_argument("--voice", default=DEFAULT_EDGE_VOICE, help="Edge TTS voice (default: Vlasta)")
+    parser.add_argument("--voice", default=DEFAULT_EDGE_VOICE, help="Edge TTS voice")
     parser.add_argument("--rate", default=DEFAULT_EDGE_RATE)
+    parser.add_argument(
+        "--eleven-voice",
+        default=DEFAULT_ELEVEN_VOICE,
+        help="ElevenLabs voice id (default: Sarah)",
+    )
+    parser.add_argument(
+        "--eleven-model",
+        default=DEFAULT_ELEVEN_MODEL,
+        help="ElevenLabs model id (default: eleven_v3)",
+    )
+    parser.add_argument(
+        "--api-key",
+        default=os.environ.get("ELEVENLABS_API_KEY", ""),
+        help="ElevenLabs API key (or set ELEVENLABS_API_KEY)",
+    )
     parser.add_argument("--force", action="store_true", help="Regenerate even if file exists")
     parser.add_argument(
         "--dry-run",
         action="store_true",
-        help="Print gender resolutions only; do not synthesize",
+        help="Print gender resolutions / credit estimate; do not synthesize",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=0,
+        help="Only process first N bank questions (0 = all)",
     )
     args = parser.parse_args()
 
@@ -164,28 +257,59 @@ def main() -> int:
     if args.engine == "piper" and not VOICE_PIPER.is_file():
         print("Missing Kasandra voice model", file=sys.stderr)
         return 1
+    if args.engine == "elevenlabs" and not args.api_key and not args.dry_run:
+        print(
+            "Missing ElevenLabs API key. Set ELEVENLABS_API_KEY or pass --api-key.",
+            file=sys.stderr,
+        )
+        return 1
 
     texts = unique_questions()
+    if args.limit and args.limit > 0:
+        texts = texts[: args.limit]
+
     if args.dry_run:
+        spoken_set: set[str] = set()
         for text in texts:
-            if "/" not in text:
-                continue
-            print(f"SRC  {text}")
             for g in genders:
-                print(f"  {g:6} {speakable(text, g)}")
+                spoken_set.add(speakable(text, g))
+            if "/" in text:
+                print(f"SRC  {text}")
+                for g in genders:
+                    print(f"  {g:6} {speakable(text, g)}")
+        print(
+            f"Estimate: {len(texts)} bank texts × genders={genders} "
+            f"→ {len(spoken_set)} unique spoken strings, "
+            f"{sum(len(s) for s in spoken_set)} characters"
+        )
         return 0
 
     for g in genders:
         (OUT_DIR / g).mkdir(parents=True, exist_ok=True)
 
+    voice_label = (
+        f"elevenlabs:{DEFAULT_ELEVEN_VOICE_NAME}:{args.eleven_model}"
+        if args.engine == "elevenlabs"
+        else f"{args.engine}:{args.voice if args.engine == 'edge' else 'kasandra'}"
+    )
     print(
-        f"Generating {len(texts)} × {len(genders)} clips "
-        f"with engine={args.engine} voice={args.voice} forms={','.join(genders)}…"
+        f"Generating {len(texts)} bank texts × {len(genders)} folders "
+        f"with {voice_label}…"
     )
 
+    # Deduplicate TTS calls by exact spoken string within this run.
+    spoken_cache: dict[str, bytes] = {}
+
     manifest: dict[str, dict] = {}
+    if MANIFEST.is_file() and not args.force:
+        try:
+            manifest = json.loads(MANIFEST.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            manifest = {}
+
     ok = 0
     skipped = 0
+    copied = 0
     failed: list[str] = []
     total = len(texts) * len(genders)
     done = 0
@@ -196,6 +320,7 @@ def main() -> int:
             "text": text,
             "forms": {g: speakable(text, g) for g in ("male", "female")},
             "files": {},
+            "engine": voice_label,
         }
         for gender in genders:
             done += 1
@@ -214,38 +339,84 @@ def main() -> int:
                 }
                 continue
             try:
-                if args.engine == "edge":
+                if spoken in spoken_cache:
+                    mp3_path.write_bytes(spoken_cache[spoken])
+                    engine_used = f"{voice_label}:dedup"
+                    copied += 1
+                elif args.engine == "elevenlabs":
+                    synthesize_elevenlabs(
+                        spoken,
+                        mp3_path,
+                        api_key=args.api_key,
+                        voice_id=args.eleven_voice,
+                        model_id=args.eleven_model,
+                    )
+                    spoken_cache[spoken] = mp3_path.read_bytes()
+                    engine_used = voice_label
+                    ok += 1
+                    time.sleep(0.15)  # gentle on free tier
+                elif args.engine == "edge":
                     asyncio.run(
                         synthesize_edge(
                             text, mp3_path, args.voice, args.rate, gender
                         )
                     )
+                    spoken_cache[spoken] = mp3_path.read_bytes()
                     engine_used = f"edge:{args.voice}"
+                    ok += 1
                 else:
                     with tempfile.TemporaryDirectory() as tmp:
                         wav_path = Path(tmp) / "out.wav"
                         synthesize_piper(text, wav_path, gender)
                         wav_to_mp3(wav_path, mp3_path)
+                    spoken_cache[spoken] = mp3_path.read_bytes()
                     engine_used = "piper:kasandra-medium"
+                    ok += 1
+
+                # If the other gender form is identical and missing, fill it now.
+                other = "female" if gender == "male" else "male"
+                if (
+                    args.gender == "both"
+                    and speakable(text, other) == spoken
+                ):
+                    other_path = OUT_DIR / other / f"{aid}.mp3"
+                    if args.force or not other_path.is_file() or other_path.stat().st_size < 500:
+                        other_path.write_bytes(spoken_cache[spoken])
+                        copied += 1
+
                 entry["files"][gender] = {
                     "file": f"{gender}/{mp3_path.name}",
                     "spoken": spoken,
                     "engine": engine_used,
                 }
-                ok += 1
                 if done % 25 == 0 or done == total:
-                    print(f"  {done}/{total} done (new={ok}, cached={skipped})")
+                    print(
+                        f"  {done}/{total} "
+                        f"(api={ok}, dedup/copy={copied}, cached={skipped}, fail={len(failed)})"
+                    )
             except Exception as exc:  # noqa: BLE001
                 failed.append(f"{gender}:{text}: {exc}")
                 print(f"FAIL [{done}] {gender}: {text}", file=sys.stderr)
                 print(f"  {exc}", file=sys.stderr)
+                # Stop early on quota / auth errors
+                msg = str(exc).lower()
+                if "quota" in msg or "payment" in msg or "401" in msg or "unauthorized" in msg:
+                    print("Stopping early due to auth/quota error.", file=sys.stderr)
+                    MANIFEST.write_text(
+                        json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
+                        encoding="utf-8",
+                    )
+                    return 1
         manifest[aid] = entry
 
     MANIFEST.write_text(
         json.dumps(manifest, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
     )
-    print(f"Done. new={ok} skipped={skipped} failed={len(failed)} -> {OUT_DIR}")
+    print(
+        f"Done. api={ok} dedup/copy={copied} skipped={skipped} "
+        f"failed={len(failed)} -> {OUT_DIR}"
+    )
     return 1 if failed else 0
 
 

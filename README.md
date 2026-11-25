@@ -48,7 +48,7 @@ Situations live in `assets/data/dialogues.json` (hotel, repair shop, shoe shop, 
 ## Examiner audio
 
 **Úloha 1** questions are stored as MP3 under `assets/audio/questions/{male,female}/`.  
-The examiner is always a **woman** (Edge TTS **cs-CZ-VlastaNeural**).  
+The examiner is always a **woman** (**ElevenLabs Sarah** · `eleven_v3`).  
 Folders only change grammar addressed to the candidate — slash forms like
 `rád/a` become *rád* or *ráda* (not “rád nebo a”).
 
@@ -57,17 +57,23 @@ Folders only change grammar addressed to the candidate — slash forms like
 | `male/`   | rád, dělal, nemocný… | yes |
 | `female/` | ráda, dělala, nemocná… | |
 
-`api/speak.php` serves those first; Gemini TTS is only a fallback.
+`api/speak.php` serves those first; Gemini TTS is only a fallback for missing clips.
 
 **Úloha 2** openings/replies use live TTS via `api/speak.php` (no pre-baked bank yet).
 
 To regenerate Task 1 audio after editing questions:
 
 ```bash
-# both candidate forms, Vlasta voice (needs edge-tts)
-.venv-tts/bin/python tools/generate-question-audio.py --force
-# preview slash resolutions only:
-.venv-tts/bin/python tools/generate-question-audio.py --dry-run
+# preferred: ElevenLabs Sarah + eleven_v3 (~9.6k unique chars for full bank)
+export ELEVENLABS_API_KEY=…   # do not commit
+python3 tools/generate-question-audio.py --engine elevenlabs --force
+
+# alternatives
+python3 tools/generate-question-audio.py --engine edge --force    # needs edge-tts
+python3 tools/generate-question-audio.py --engine piper --force
+
+# credit estimate / slash preview
+python3 tools/generate-question-audio.py --dry-run
 ```
 
 ## Scoring (STT)

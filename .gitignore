@@ -7,3 +7,5 @@ tools/piper/unique-texts.json
 .venv-tts/
 __pycache__/
 *.pyc
+
+.scratch/
