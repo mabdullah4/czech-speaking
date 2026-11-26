@@ -16,7 +16,13 @@ if (!is_array($payload) || empty($payload['topics'])) {
 $allTopics = $payload['topics'];
 $availableIds = array_keys($allTopics);
 
-// Total questions in the session (default 4)
+// Order: random (default) | sequential (all questions of each topic in bank order)
+$order = strtolower(trim((string) ($_GET['order'] ?? 'random')));
+if ($order !== 'sequential') {
+    $order = 'random';
+}
+
+// Total questions in the session (default 4). Ignored when order=sequential (all).
 $totalWanted = isset($_GET['total']) ? (int) $_GET['total'] : (isset($_GET['per']) ? (int) $_GET['per'] : 4);
 $totalWanted = max(1, min(20, $totalWanted));
 
@@ -43,41 +49,72 @@ if ($requestedIds) {
     $pickedIds = array_slice($ids, 0, $topicsWanted);
 }
 
-$pool = [];
 $sessionTopicsMeta = [];
-foreach ($pickedIds as $id) {
-    $topic = $allTopics[$id];
-    $qs = $topic['questions'] ?? [];
-    if (!$qs) {
-        continue;
-    }
-    $sessionTopicsMeta[$id] = [
-        'id' => $id,
-        'name' => $topic['name'],
-        'count' => 0,
-    ];
-    foreach ($qs as $q) {
-        $pool[] = [
-            'topicId' => $id,
-            'topic' => $topic['name'],
-            'subtopic' => $q['subtopic'] ?? null,
-            'question' => $q['question'],
+$flatQuestions = [];
+
+if ($order === 'sequential') {
+    // All questions of each picked topic, in bank order, topic blocks in a row.
+    foreach ($pickedIds as $id) {
+        $topic = $allTopics[$id];
+        $qs = $topic['questions'] ?? [];
+        if (!$qs) {
+            continue;
+        }
+        $sessionTopicsMeta[$id] = [
+            'id' => $id,
+            'name' => $topic['name'],
+            'count' => 0,
         ];
+        foreach ($qs as $q) {
+            $flatQuestions[] = [
+                'topicId' => $id,
+                'topic' => $topic['name'],
+                'subtopic' => $q['subtopic'] ?? null,
+                'question' => $q['question'],
+            ];
+            $sessionTopicsMeta[$id]['count'] += 1;
+        }
+    }
+} else {
+    $pool = [];
+    foreach ($pickedIds as $id) {
+        $topic = $allTopics[$id];
+        $qs = $topic['questions'] ?? [];
+        if (!$qs) {
+            continue;
+        }
+        $sessionTopicsMeta[$id] = [
+            'id' => $id,
+            'name' => $topic['name'],
+            'count' => 0,
+        ];
+        foreach ($qs as $q) {
+            $pool[] = [
+                'topicId' => $id,
+                'topic' => $topic['name'],
+                'subtopic' => $q['subtopic'] ?? null,
+                'question' => $q['question'],
+            ];
+        }
+    }
+
+    if (!$pool) {
+        json_response(['error' => 'No questions for selected topics'], 400);
+    }
+
+    shuffle($pool);
+    $flatQuestions = array_slice($pool, 0, min($totalWanted, count($pool)));
+
+    foreach ($flatQuestions as $q) {
+        $tid = $q['topicId'];
+        if (isset($sessionTopicsMeta[$tid])) {
+            $sessionTopicsMeta[$tid]['count'] += 1;
+        }
     }
 }
 
-if (!$pool) {
+if (!$flatQuestions) {
     json_response(['error' => 'No questions for selected topics'], 400);
-}
-
-shuffle($pool);
-$flatQuestions = array_slice($pool, 0, min($totalWanted, count($pool)));
-
-foreach ($flatQuestions as $q) {
-    $tid = $q['topicId'];
-    if (isset($sessionTopicsMeta[$tid])) {
-        $sessionTopicsMeta[$tid]['count'] += 1;
-    }
 }
 
 $sessionTopics = array_values(array_filter(
@@ -89,5 +126,6 @@ json_response([
     'topics' => $sessionTopics,
     'questions' => $flatQuestions,
     'total' => count($flatQuestions),
+    'order' => $order,
     'mode' => $requestedIds ? 'selected' : 'random',
 ]);

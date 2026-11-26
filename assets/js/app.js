@@ -16,6 +16,7 @@
   const scenarioHints = document.querySelector("#scenarioHints");
   const qMeta = document.querySelector("#qMeta");
   const qTopic = document.querySelector("#qTopic");
+  const qSection = document.querySelector("#qSection");
   const qPrompt = document.querySelector("#qPrompt");
   const qText = document.querySelector("#qText");
   const answerLabel = document.querySelector("#answerLabel");
@@ -49,12 +50,15 @@
   const clearTopicsBtn = document.querySelector("#clearTopicsBtn");
   const randomTwoBtn = document.querySelector("#randomTwoBtn");
   const questionCountSelect = document.querySelector("#questionCount");
+  const questionCountField = document.querySelector("#questionCountField");
+  const questionOrderSelect = document.querySelector("#questionOrder");
   const taskTabs = document.querySelectorAll(".task-tab");
 
   const rateStorageKey = "speaking-t1-speech-rate";
   const topicsStorageKey = "speaking-t1-selected-topics";
   const dialoguesStorageKey = "speaking-t2-selected-dialogues";
   const questionCountStorageKey = "speaking-t1-question-count";
+  const questionOrderStorageKey = "speaking-t1-question-order";
   const genderStorageKey = "speaking-t1-voice-gender";
   const taskStorageKey = "speaking-active-task";
 
@@ -79,6 +83,8 @@
   /** @type {"male"|"female"} */
   let askedGender = "male";
   let questionCount = 4;
+  /** @type {"random"|"sequential"} */
+  let questionOrder = "random";
   let selectingLocked = false;
   /** @type {Map<string, Promise<{audio:string,mime:string,url?:string|null,spoken?:string}>>} */
   let audioCache = new Map();
@@ -187,13 +193,19 @@
       return;
     }
     if (!selectedTopicIds.size) {
-      selectionSummary.textContent = "Random 2 topics";
+      selectionSummary.textContent =
+        questionOrder === "sequential"
+          ? "Random 2 topics · all Q in order"
+          : "Random 2 topics";
       return;
     }
-    const names = topicsCatalog
-      .filter((t) => selectedTopicIds.has(t.id))
-      .map((t) => t.name);
-    selectionSummary.textContent = `${names.length} selected · ${names.join(", ")}`;
+    const picked = topicsCatalog.filter((t) => selectedTopicIds.has(t.id));
+    const names = picked.map((t) => t.name);
+    const qTotal = picked.reduce((sum, t) => sum + t.count, 0);
+    selectionSummary.textContent =
+      questionOrder === "sequential"
+        ? `${names.length} selected · all ${qTotal} Q in order`
+        : `${names.length} selected · ${names.join(", ")}`;
   };
 
   const renderSidebarList = (highlightIds = null) => {
@@ -489,6 +501,13 @@
     const total = session.questions.length;
     qMeta.textContent = `Question ${index + 1} of ${total}`;
     qTopic.textContent = q.topic;
+    if (q.subtopic) {
+      qSection.textContent = q.subtopic;
+      qSection.classList.remove("hidden");
+    } else {
+      qSection.textContent = "";
+      qSection.classList.add("hidden");
+    }
     qText.textContent = resolveGenderForm(q.question, askedGender);
     qText.classList.toggle("hidden-q", !showQuestionText);
 
@@ -535,6 +554,7 @@
     answerText.textContent = "";
     feedbackBox.innerHTML = "";
     answerLabel.textContent = "Vaše otázka";
+    qSection?.classList.add("hidden");
     renderScenarioCard(turn);
 
     topicChips.innerHTML = (session.dialogues || [])
@@ -1021,10 +1041,26 @@
     if (questionCountSelect) {
       questionCountSelect.value = String(questionCount);
     }
-    if (activeTask === 1) {
-      progressLabel.textContent = `/ ${questionCount}`;
-      topMeta.innerHTML = `Practice <strong>${questionCount} questions</strong>`;
+    if (questionOrderSelect) {
+      questionOrderSelect.value = questionOrder;
     }
+    questionCountField?.classList.toggle("hidden", questionOrder === "sequential");
+    if (activeTask === 1) {
+      if (questionOrder === "sequential") {
+        const picked = selectedTopicIds.size
+          ? topicsCatalog.filter((t) => selectedTopicIds.has(t.id))
+          : null;
+        const n = picked
+          ? picked.reduce((sum, t) => sum + t.count, 0)
+          : "all";
+        progressLabel.textContent = typeof n === "number" ? `/ ${n}` : "";
+        topMeta.innerHTML = `Practice <strong>all questions in order</strong>`;
+      } else {
+        progressLabel.textContent = `/ ${questionCount}`;
+        topMeta.innerHTML = `Practice <strong>${questionCount} questions</strong>`;
+      }
+    }
+    updateSelectionSummary();
   };
 
   const setQuestionCount = (value) => {
@@ -1034,8 +1070,17 @@
     syncQuestionCountUi();
   };
 
+  const setQuestionOrder = (value) => {
+    questionOrder = value === "sequential" ? "sequential" : "random";
+    localStorage.setItem(questionOrderStorageKey, questionOrder);
+    syncQuestionCountUi();
+  };
+
   const buildSessionUrl = () => {
-    const params = new URLSearchParams({ total: String(questionCount) });
+    const params = new URLSearchParams({ order: questionOrder });
+    if (questionOrder !== "sequential") {
+      params.set("total", String(questionCount));
+    }
     if (selectedTopicIds.size) {
       params.set("ids", [...selectedTopicIds].join(","));
     } else {
@@ -1271,9 +1316,14 @@
   questionCountSelect?.addEventListener("change", () =>
     setQuestionCount(questionCountSelect.value),
   );
+  questionOrderSelect?.addEventListener("change", () =>
+    setQuestionOrder(questionOrderSelect.value),
+  );
 
   const savedRate = localStorage.getItem(rateStorageKey);
   if (savedRate) syncRateSelects(savedRate);
+  const savedOrder = localStorage.getItem(questionOrderStorageKey);
+  if (savedOrder === "sequential") questionOrder = "sequential";
   const savedCount = localStorage.getItem(questionCountStorageKey);
   if (savedCount) setQuestionCount(savedCount);
   else syncQuestionCountUi();

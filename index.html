@@ -11,7 +11,7 @@
       href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap"
       rel="stylesheet"
     />
-    <link rel="stylesheet" href="assets/css/styles.css" />
+    <link rel="stylesheet" href="assets/css/styles.css?v=20261126" />
   </head>
   <body>
     <div class="app">
@@ -74,11 +74,20 @@
           <div class="hero-panel" id="homePanelT1">
             <p>
               Procvičujte ústní část A2: vyberte témata vlevo (nebo nechte
-              prázdné → náhodná <strong>2 témata</strong>). Zvolte počet otázek
-              (výchozí <strong>4</strong>). Otázky uslyšíte; odpověď nahrajete mikrofonem.
+              prázdné → náhodná <strong>2 témata</strong>). Zvolte
+              <strong>Random mix</strong> (počet otázek) nebo
+              <strong>All of topic in order</strong> (všechny otázky tématu
+              postupně). Otázky uslyšíte; odpověď nahrajete mikrofonem.
             </p>
             <div class="setup-bar" aria-label="Practice settings">
-              <label class="setup-field" for="questionCount">
+              <label class="setup-field" for="questionOrder">
+                <span class="field-label">Order</span>
+                <select id="questionOrder" aria-label="Question order">
+                  <option value="random" selected>Random mix</option>
+                  <option value="sequential">All of topic in order</option>
+                </select>
+              </label>
+              <label class="setup-field" for="questionCount" id="questionCountField">
                 <span class="field-label">Questions</span>
                 <select id="questionCount" aria-label="Number of questions">
                   <option value="2">2</option>
@@ -184,6 +193,7 @@
             <div class="question-block">
               <div class="q-meta" id="qMeta">Question 1 of 8</div>
               <div class="q-topic" id="qTopic">—</div>
+              <div class="q-section hidden" id="qSection">—</div>
               <p class="q-prompt" id="qPrompt">Poslouchejte otázku a odpovězte celou větou.</p>
               <p class="q-text hidden-q" id="qText">—</p>
               <div class="controls">
@@ -234,6 +244,6 @@
       </main>
     </div>
 
-    <script src="assets/js/app.js?v=20261125t2"></script>
+    <script src="assets/js/app.js?v=20261126order"></script>
   </body>
 </html>
