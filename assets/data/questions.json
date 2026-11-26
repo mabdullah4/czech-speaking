@@ -181,7 +181,15 @@
         },
         {
           "subtopic": "Moje město",
+          "question": "Jak ve městě cestujete?"
+        },
+        {
+          "subtopic": "Moje město",
           "question": "Co se vám ve městě nelíbí?"
+        },
+        {
+          "subtopic": "Moje město",
+          "question": "Jak vypadá okolí města?"
         },
         {
           "subtopic": "Moje město",
@@ -201,6 +209,10 @@
         },
         {
           "subtopic": "Moje země",
+          "question": "Jak dlouho žijete v České republice?"
+        },
+        {
+          "subtopic": "Moje země",
           "question": "Jaká je vaše země?"
         },
         {
@@ -209,7 +221,15 @@
         },
         {
           "subtopic": "Moje země",
+          "question": "Jaké počasí je ve vaší zemi v létě?"
+        },
+        {
+          "subtopic": "Moje země",
           "question": "Jaké počasí je ve vaší zemi v zimě?"
+        },
+        {
+          "subtopic": "Moje země",
+          "question": "Jak se jmenuje hlavní město vaší země?"
         },
         {
           "subtopic": "Moje země",
@@ -274,6 +294,10 @@
         },
         {
           "subtopic": "Cestování",
+          "question": "Kdy jste naposledy letěl/a letadlem?"
+        },
+        {
+          "subtopic": "Cestování",
           "question": "Kam jste jel/a naposledy vlakem?"
         },
         {
@@ -290,7 +314,11 @@
         },
         {
           "subtopic": "Cestování",
-          "question": "Cosi musíte koupit, když chcete jet vlakem?"
+          "question": "Co si musíte koupit, když chcete jet vlakem?"
+        },
+        {
+          "subtopic": "Cestování",
+          "question": "Jak často chodíte pěšky?"
         },
         {
           "subtopic": "Cestování",
@@ -384,6 +412,46 @@
         {
           "subtopic": "Můj víkend",
           "question": "Jak pozdě chodíte spát?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "V kolik hodin jste vstával/a v sobotu?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Kde jste o víkendu snídal/a?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "S kým jste v sobotu obědval/a?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "V kolik hodin jste šel/šla v sobotu spát?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Kam jste o víkendu jel/a nebo šel/šla?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Co jste dělal/a v neděli odpoledne?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Co jste si o víkendu koupil/a?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Odkdy dokdy jste v neděli obědval/a?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Co jste v neděli večeřel/a?"
+        },
+        {
+          "subtopic": "Minulý víkend",
+          "question": "Koho nebo co jste o víkendu navštívil/a?"
         }
       ]
     },
@@ -521,6 +589,10 @@
         },
         {
           "subtopic": "Obchody",
+          "question": "Kam půjdete koupit boty?"
+        },
+        {
+          "subtopic": "Obchody",
           "question": "Kdy jste naposledy koupil/a počítač?"
         },
         {
@@ -529,7 +601,15 @@
         },
         {
           "subtopic": "Obchody",
+          "question": "Co obvykle kupujete jako dárek k narozeninám?"
+        },
+        {
+          "subtopic": "Obchody",
           "question": "Jak často jezdíte nakoupit autem?"
+        },
+        {
+          "subtopic": "Obchody",
+          "question": "Který obchod je nejblíž vašeho domu?"
         },
         {
           "subtopic": "Obchody",
@@ -549,6 +629,10 @@
         },
         {
           "subtopic": "Oblečení",
+          "question": "Jaké oblečení rád/a nosíte?"
+        },
+        {
+          "subtopic": "Oblečení",
           "question": "Které oblečení nesnášíte?"
         },
         {
@@ -557,7 +641,15 @@
         },
         {
           "subtopic": "Oblečení",
+          "question": "Co máte teď na sobě?"
+        },
+        {
+          "subtopic": "Oblečení",
           "question": "Co nosíte v zimě?"
+        },
+        {
+          "subtopic": "Oblečení",
+          "question": "Co nosíte v létě?"
         },
         {
           "subtopic": "Oblečení",
@@ -589,7 +681,15 @@
         },
         {
           "subtopic": "Služby",
+          "question": "Kdo vám ušije nebo opraví oblečení?"
+        },
+        {
+          "subtopic": "Služby",
           "question": "Jakého máte telefonního operátora?"
+        },
+        {
+          "subtopic": "Služby",
+          "question": "Jak často chodíte na pedikúru?"
         },
         {
           "subtopic": "Služby",
@@ -759,6 +859,10 @@
         },
         {
           "subtopic": "Zaměstnání",
+          "question": "Jak moc je vaše práce nebezpečná?"
+        },
+        {
+          "subtopic": "Zaměstnání",
           "question": "Kolik peněz chcete vydělávat?"
         },
         {
@@ -787,11 +891,23 @@
         },
         {
           "subtopic": "Pracovní plány",
+          "question": "Kdy půjdete do důchodu?"
+        },
+        {
+          "subtopic": "Pracovní plány",
           "question": "Co budete dělat, až budete v důchodu?"
         },
         {
           "subtopic": "Pracovní plány",
+          "question": "Jak se jmenuje váš šéf?"
+        },
+        {
+          "subtopic": "Pracovní plány",
           "question": "Kdo ve vaší rodině šel nebo půjde na mateřskou dovolenou?"
+        },
+        {
+          "subtopic": "Pracovní plány",
+          "question": "Co budete dělat, když dostanete výpověď?"
         },
         {
           "subtopic": "Pracovní plány",
@@ -1017,7 +1133,7 @@
         },
         {
           "subtopic": "Cizí jazyky",
-          "question": "Kdyjste se začal/a poprvé učit cizí jazyk?"
+          "question": "Kdy jste se začal/a poprvé učit cizí jazyk?"
         },
         {
           "subtopic": "Cizí jazyky",
@@ -1025,11 +1141,15 @@
         },
         {
           "subtopic": "Cizí jazyky",
-          "question": "Jak často se učíte cízí jazyk?"
+          "question": "Jak často se učíte cizí jazyk?"
         },
         {
           "subtopic": "Cizí jazyky",
-          "question": "Covám nejvíc pomáhá, když se učíte cizí jazyk?"
+          "question": "Co vám nejvíc pomáhá, když se učíte cizí jazyk?"
+        },
+        {
+          "subtopic": "Cizí jazyky",
+          "question": "Jak dlouho už se učíte česky?"
         },
         {
           "subtopic": "Cizí jazyky",
@@ -1046,6 +1166,10 @@
         {
           "subtopic": "Zkouška z češtiny",
           "question": "Proč děláte tuhle zkoušku z češtiny?"
+        },
+        {
+          "subtopic": "Zkouška z češtiny",
+          "question": "Kdy jste se začal/a učit česky?"
         },
         {
           "subtopic": "Zkouška z češtiny",
@@ -1130,6 +1254,10 @@
         },
         {
           "subtopic": "Zdravý životní styl",
+          "question": "Co nezdravého často jíte?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
           "question": "Znáte někoho, kdo hodně kouří?"
         },
         {
@@ -1138,7 +1266,15 @@
         },
         {
           "subtopic": "Zdravý životní styl",
+          "question": "Kolik hodin denně spíte?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
           "question": "Jak často sportujete?"
+        },
+        {
+          "subtopic": "Zdravý životní styl",
+          "question": "Kam chodíte na procházky?"
         },
         {
           "subtopic": "Zdravý životní styl",
@@ -1158,6 +1294,10 @@
         },
         {
           "subtopic": "Nemoci a doktoři",
+          "question": "Měl/a jste někdy úraz nebo nehodu?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
           "question": "Ke kterému lékaři chodíte nejčastěji?"
         },
         {
@@ -1166,7 +1306,15 @@
         },
         {
           "subtopic": "Nemoci a doktoři",
+          "question": "Jak dlouho jste byl/a v nemocnici?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
           "question": "Ke kterému lékaři jdete, když vás bolí zuby?"
+        },
+        {
+          "subtopic": "Nemoci a doktoři",
+          "question": "Jaké léky bere člověk, který má alergii?"
         },
         {
           "subtopic": "Nemoci a doktoři",
@@ -1186,6 +1334,10 @@
         },
         {
           "subtopic": "Sporty",
+          "question": "Na jaký sport se díváte v televizi?"
+        },
+        {
+          "subtopic": "Sporty",
           "question": "Jak často vaše děti sportujou?"
         },
         {
@@ -1194,7 +1346,15 @@
         },
         {
           "subtopic": "Sporty",
+          "question": "Kde můžete lyžovat?"
+        },
+        {
+          "subtopic": "Sporty",
           "question": "Který sport byste se chtěl/a naučit?"
+        },
+        {
+          "subtopic": "Sporty",
+          "question": "Kdy jste naposledy cvičil/a?"
         },
         {
           "subtopic": "Sporty",
