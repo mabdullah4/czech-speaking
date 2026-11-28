@@ -332,10 +332,13 @@ def main() -> int:
                 and mp3_path.stat().st_size > 500
             ):
                 skipped += 1
+                # Prefill from identical other-gender form uses :dedup; true resume uses cached.
+                other = "female" if gender == "male" else "male"
+                prefilled = speakable(text, other) == spoken and spoken in spoken_cache
                 entry["files"][gender] = {
                     "file": f"{gender}/{mp3_path.name}",
                     "spoken": spoken,
-                    "engine": "cached",
+                    "engine": f"{voice_label}:dedup" if prefilled else "cached",
                 }
                 continue
             try:
